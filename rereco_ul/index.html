@@ -1,0 +1,636 @@
+<html>
+  <head>
+    <title>PdmV ReReco UL</title>
+    <script src="https://cdn.jsdelivr.net/npm/vue@2"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/css/bootstrap.min.css">
+    <link rel="icon" type="image/png" href="pdmv.png" />
+    <style>
+      body {
+        background: #fafafa;
+      }
+      td, th {
+        border: 1px #aaa solid;
+        padding: 2px 4px;
+        font-size: 0.9em;
+        text-align: center;
+        white-space: nowrap;
+      }
+      th {
+        text-align: center;
+        background: #eee;
+      }
+      tr {
+        height: 30px;
+        background: white;
+      }
+      tr:hover {
+        background: #eee !important;
+      }
+      table {
+        margin-left: auto;
+        margin-right: auto;
+        margin-bottom: 40px;
+        margin-top: 20px;
+        margin-left: 5px;
+        margin-right: 5px;
+        border-collapse: collapse;
+      }
+      .sort {
+        cursor: pointer;
+      }
+      input {
+        width: 98%;
+        margin: auto;
+        margin-bottom: 2px;
+        border: 1px solid black;
+        padding-left: 4px;
+        padding-right: 4px;
+      }
+      input[type=checkbox] {
+        width: unset;
+      }
+      .sorted-by {
+        background: #c8c8c8;
+      }
+      .orange-cell {
+        background: #fae3d2;
+      }
+      a {
+        color: #005eb6;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app">
+      <h3 style="text-align: center; margin-top: 20px;">PdmV ReReco UL table</h3>
+      <div style="text-align:center;">
+        <a href="https://pdmv-pages.web.cern.ch/">PdmV pages</a> | <a href="full_table.html"><i style="color: red">Full</i> table</a>
+      </div>
+      <div style="text-align: center; margin: 8px;">
+        <input
+          type="checkbox"
+          :checked="columns.primary_dataset"
+          @input="columns.primary_dataset = $event.target.checked"
+        /> Primary dataset
+        <input
+          type="checkbox"
+          :checked="columns.whitelist_runs"
+          @input="columns.whitelist_runs = $event.target.checked"
+        /> Whitelist runs
+        <input
+          type="checkbox"
+          :checked="columns.whitelist_x_dcs_runs"
+          @input="columns.whitelist_x_dcs_runs = $event.target.checked"
+        /> Whitelist x DCS runs
+        <input
+          type="checkbox"
+          :checked="columns.raw_x_dcs_runs"
+          @input="columns.raw_x_dcs_runs = $event.target.checked"
+        /> RAW x DCS runs
+        <input
+          type="checkbox"
+          :checked="columns.whitelist_and_raw_x_dcs_runs"
+          @input="columns.whitelist_and_raw_x_dcs_runs = $event.target.checked"
+        /> Diff Whitelist and RAW x DCS runs
+        <input
+          type="checkbox"
+          :checked="columns.twiki"
+          @input="columns.twiki = $event.target.checked"
+        /> TWiki
+        <input
+          type="checkbox"
+          :checked="columns.aod"
+          @input="columns.aod = $event.target.checked"
+        /> AOD
+        <input
+          type="checkbox"
+          :checked="columns.miniaod_v1"
+          @input="columns.miniaod_v1 = $event.target.checked"
+        /> MiniAODv1
+        <input
+          type="checkbox"
+          :checked="columns.miniaod_v1_nanoaod_v8"
+          @input="columns.miniaod_v1_nanoaod_v8 = $event.target.checked"
+        /> MiniAODv1 NanoAODv8
+        <input
+          type="checkbox"
+          :checked="columns.miniaod_v2"
+          @input="columns.miniaod_v2 = $event.target.checked"
+        /> MiniAODv2
+        <input
+          type="checkbox"
+          :checked="columns.miniaod_v2_nanoaod_v9"
+          @input="columns.miniaod_v2_nanoaod_v9 = $event.target.checked"
+        /> MiniAODv2 NanoAODv9
+        <br>
+        <input
+          type="checkbox"
+          :checked="columns.diff_produced_vs_parent"
+          @input="columns.diff_produced_vs_parent = $event.target.checked"
+        /> Diff to parent
+        <input
+          type="checkbox"
+          :checked="columns.produced_expected"
+          @input="columns.produced_expected = $event.target.checked"
+        /> Produced/Expected
+        <br>
+        Updated: {{lastUpdate}}
+      </div>
+      <table>
+        <tr>
+          <th rowspan=2 :class="sortOn == 'year' ? 'sorted-by' : ''">
+            <span class="sort" @click="changeSortToColumn('year')">
+              Year
+            </span>
+          </th>
+          <th rowspan=2 :class="sortOn == 'input_dataset' ? 'sorted-by' : ''">
+            <span class="sort" @click="changeSortToColumn('input_dataset')">
+              RAW dataset
+            </span>
+            <br>
+            <input type="text" class="header-search" placeholder="Type to search..." v-model="search.input_dataset" @input="applyFilters()">
+          </th>
+          <th v-if="columns.primary_dataset" rowspan=2 :class="sortOn == 'primary_dataset' ? 'sorted-by' : ''">
+            <span class="sort" @click="changeSortToColumn('primary_dataset')">
+              Primary dataset
+            </span>
+          </th>
+          <th v-if="columns.whitelist_runs" rowspan=2 :class="sortOn == 'whitelist_runs' || sortOn == 'whitelist_events' ? 'sorted-by' : ''">
+            <span class="sort" @click="changeSortToColumn('whitelist_runs')">Whitelist runs</span>
+            <br>
+            <small class="sort" @click="changeSortToColumn('whitelist_events')">Whitelist events</small>
+            <br>
+            <i>Expected</i>
+          </th>
+          <th v-if="columns.whitelist_x_dcs_runs" rowspan=2 :class="sortOn == 'whitelist_x_dcs_runs' || sortOn == 'whitelist_x_dcs_events' ? 'sorted-by' : ''">
+            <span class="sort" @click="changeSortToColumn('whitelist_x_dcs_runs')">Whitelist x DCS runs</span>
+            <br>
+            <small class="sort" @click="changeSortToColumn('whitelist_x_dcs_events')">Whitelist x DCS events</small>
+          </th>
+          <th v-if="columns.raw_x_dcs_runs" rowspan=2 :class="sortOn == 'raw_x_dcs_runs' || sortOn == 'raw_x_dcs_events' ? 'sorted-by' : ''">
+            <span class="sort" @click="changeSortToColumn('raw_x_dcs_runs')">RAW x DCS runs</span>
+            <br>
+            <small class="sort" @click="changeSortToColumn('raw_x_dcs_events')">RAW x DCS events</small>
+          </th>
+          <th v-if="columns.whitelist_and_raw_x_dcs_runs" rowspan=2 :class="sortOn == 'whitelist_and_raw_x_dcs_runs' ? 'sorted-by' : ''">
+            <span class="sort" @click="changeSortToColumn('whitelist_and_raw_x_dcs_runs')">Diff Whitelist and<br>RAW x DCS runs</span>
+          </th>
+          <th v-if="columns.twiki" colspan=2>
+            TWiki
+          </th>
+          <th v-if="columns.aod" :colspan="columns.diff_produced_vs_parent && columns.produced_expected ? 3 : columns.diff_produced_vs_parent || columns.produced_expected ? 2 : 1">
+            AOD
+            <br>
+            <input type="text" class="header-search" placeholder="Type to search..." v-model="search.aod_dataset" @input="applyFilters()">
+          </th>
+          <th v-if="columns.miniaod_v1" :colspan="columns.diff_produced_vs_parent && columns.produced_expected ? 3 : columns.diff_produced_vs_parent || columns.produced_expected ? 2 : 1">
+            MiniAODv1
+            <br>
+            <input type="text" class="header-search" placeholder="Type to search..." v-model="search.miniaod_v1_dataset" @input="applyFilters()">
+          </th>
+          <th v-if="columns.miniaod_v1_nanoaod_v8" :colspan="columns.diff_produced_vs_parent && columns.produced_expected ? 3 : columns.diff_produced_vs_parent || columns.produced_expected ? 2 : 1">
+            MiniAODv1 NanoAODv8
+            <br>
+            <input type="text" class="header-search" placeholder="Type to search..." v-model="search.miniaod_v1_nanoaod_v8_dataset" @input="applyFilters()">
+          </th>
+          <th v-if="columns.miniaod_v2" :colspan="columns.diff_produced_vs_parent && columns.produced_expected ? 3 : columns.diff_produced_vs_parent || columns.produced_expected ? 2 : 1">
+            MiniAODv2
+            <br>
+            <input type="text" class="header-search" placeholder="Type to search..." v-model="search.miniaod_v2_dataset" @input="applyFilters()">
+          </th>
+          <th v-if="columns.miniaod_v2_nanoaod_v9" :colspan="columns.diff_produced_vs_parent && columns.produced_expected ? 3 : columns.diff_produced_vs_parent || columns.produced_expected ? 2 : 1">
+            MiniAODv2 NanoAODv9
+            <br>
+            <input type="text" class="header-search" placeholder="Type to search..." v-model="search.miniaod_v2_nanoaod_v9_dataset" @input="applyFilters()">
+          </th>
+        </tr>
+        <tr>
+          <th v-if="columns.twiki" :class="sortOn == 'twiki_runs' ? 'sorted-by' : ''">
+            <span class="sort" @click="changeSortToColumn('twiki_runs')">Runs</span>
+          </th>
+          <th v-if="columns.twiki" :class="sortOn == 'twiki_and_whitelist_runs_diff' ? 'sorted-by' : ''">
+            <span class="sort" @click="changeSortToColumn('twiki_and_whitelist_runs_diff')">Diff to Whitelist</span>
+          </th>
+          <template v-if="columns.aod">
+            <th :class="sortOn == 'aod_dataset' || sortOn == 'aod_prepid' ? 'sorted-by' : ''">
+              <span class="sort" @click="changeSortToColumn('aod_dataset')">Dataset</span>&nbsp;
+              <br>
+              <small class="sort" @click="changeSortToColumn('aod_prepid')">PrepID</small>
+            </th>
+            <th :class="sortOn == 'aod_runs_diff' ? 'sorted-by' : ''" v-if="columns.diff_produced_vs_parent">
+              <span class="sort" @click="changeSortToColumn('aod_vs_parent_runs_diff')">Diff to Whitelist</span>
+            </th>
+            <th :class="sortOn == 'aod_produced_vs_parent_ratio' || sortOn == 'aod_events'  ? 'sorted-by' : ''" v-if="columns.produced_expected">
+              <span class="sort" @click="changeSortToColumn('aod_produced_vs_parent_ratio')">Produced/Expected</span>
+              <br>
+              <small class="sort" @click="changeSortToColumn('aod_events')">Produced events</small>
+            </th>
+          </template>
+          <template v-if="columns.miniaod_v1">
+            <th :class="sortOn == 'miniaod_v1_dataset' || sortOn == 'miniaod_v1_prepid' ? 'sorted-by' : ''">
+              <span class="sort" @click="changeSortToColumn('miniaod_v1_dataset')">Dataset</span>&nbsp;
+              <br>
+              <small class="sort" @click="changeSortToColumn('miniaod_v1_prepid')">PrepID</small>
+            </th>
+            <th :class="sortOn == 'miniaod_v1_runs_diff' ? 'sorted-by' : ''" v-if="columns.diff_produced_vs_parent">
+              <span class="sort" @click="changeSortToColumn('miniaod_v1_vs_parent_runs_diff')">Diff to parent</span>
+            </th>
+            <th :class="sortOn == 'miniaod_v1_produced_vs_parent_ratio' || sortOn == 'miniaod_v1_events'  ? 'sorted-by' : ''" v-if="columns.produced_expected">
+              <span class="sort" @click="changeSortToColumn('miniaod_v1_produced_vs_parent_ratio')">Produced/Expected</span>
+              <br>
+              <small class="sort" @click="changeSortToColumn('miniaod_v1_events')">Produced events</small>
+            </th>
+          </template>
+          <template v-if="columns.miniaod_v1_nanoaod_v8">
+            <th :class="sortOn == 'miniaod_v1_nanoaod_v8_dataset' || sortOn == 'miniaod_v1_nanoaod_v8_prepid' ? 'sorted-by' : ''">
+              <span class="sort" @click="changeSortToColumn('miniaod_v1_nanoaod_v8_dataset')">Dataset</span>&nbsp;
+              <br>
+              <small class="sort" @click="changeSortToColumn('miniaod_v1_nanoaod_v8_prepid')">PrepID</small>
+            </th>
+            <th :class="sortOn == 'miniaod_v1_nanoaod_v8_runs_diff' ? 'sorted-by' : ''" v-if="columns.diff_produced_vs_parent">
+              <span class="sort" @click="changeSortToColumn('miniaod_v1_nanoaod_v8_vs_parent_runs_diff')">Diff to parent</span>
+            </th>
+            <th :class="sortOn == 'miniaod_v1_nanoaod_v8_produced_vs_parent_ratio' || sortOn == 'miniaod_v1_nanoaod_v8_events'  ? 'sorted-by' : ''" v-if="columns.produced_expected">
+              <span class="sort" @click="changeSortToColumn('miniaod_v1_nanoaod_v8_produced_vs_parent_ratio')">Produced/Expected</span>
+              <br>
+              <small class="sort" @click="changeSortToColumn('miniaod_v1_nanoaod_v8_events')">Produced events</small>
+            </th>
+          </template>
+          <template v-if="columns.miniaod_v2">
+            <th :class="sortOn == 'miniaod_v2_dataset' || sortOn == 'miniaod_v2_prepid' ? 'sorted-by' : ''">
+              <span class="sort" @click="changeSortToColumn('miniaod_v2_dataset')">Dataset</span>&nbsp;
+              <br>
+              <small class="sort" @click="changeSortToColumn('miniaod_v2_prepid')">PrepID</small>
+            </th>
+            <th :class="sortOn == 'miniaod_v2_runs_diff' ? 'sorted-by' : ''" v-if="columns.diff_produced_vs_parent">
+              <span class="sort" @click="changeSortToColumn('miniaod_v2_vs_parent_runs_diff')">Diff to parent</span>
+            </th>
+            <th :class="sortOn == 'miniaod_v2_produced_vs_parent_ratio' || sortOn == 'miniaod_v2_events'  ? 'sorted-by' : ''" v-if="columns.produced_expected">
+              <span class="sort" @click="changeSortToColumn('miniaod_v2_produced_vs_parent_ratio')">Produced/Expected</span>
+              <br>
+              <small class="sort" @click="changeSortToColumn('miniaod_v2_events')">Produced events</small>
+            </th>
+          </template>
+          <template v-if="columns.miniaod_v2_nanoaod_v9">
+            <th :class="sortOn == 'miniaod_v2_nanoaod_v9_dataset' || sortOn == 'miniaod_v2_nanoaod_v9_prepid' ? 'sorted-by' : ''">
+              <span class="sort" @click="changeSortToColumn('miniaod_v2_nanoaod_v9_dataset')">Dataset</span>&nbsp;
+              <br>
+              <small class="sort" @click="changeSortToColumn('miniaod_v2_nanoaod_v9_prepid')">PrepID</small>
+            </th>
+            <th :class="sortOn == 'miniaod_v2_nanoaod_v9_runs_diff' ? 'sorted-by' : ''" v-if="columns.diff_produced_vs_parent">
+              <span class="sort" @click="changeSortToColumn('miniaod_v2_nanoaod_v9_vs_parent_runs_diff')">Diff to parent</span>
+            </th>
+            <th :class="sortOn == 'miniaod_v2_nanoaod_v9_produced_vs_parent_ratio' || sortOn == 'miniaod_v2_nanoaod_v9_events'  ? 'sorted-by' : ''" v-if="columns.produced_expected">
+              <span class="sort" @click="changeSortToColumn('miniaod_v2_nanoaod_v9_produced_vs_parent_ratio')">Produced/Expected</span>
+              <br>
+              <small class="sort" @click="changeSortToColumn('miniaod_v2_nanoaod_v9_events')">Produced events</small>
+            </th>
+          </template>
+        </tr>
+        <tr v-for="row in rows">
+          <td>{{row.year}}</td>
+          <td><a target="_blank" :href="makeDASLink(row.input_dataset)">{{row.input_dataset}}</a><br><small>{{row.raw_runs}} runs {{row.raw_events}} events</small></td>
+          <td v-if="columns.primary_dataset">{{row.primary_dataset}}</td>
+          <td v-if="columns.whitelist_runs">{{row.whitelist_runs}} runs<br><small>{{row.whitelist_events}} events</small></td>
+          <td v-if="columns.whitelist_x_dcs_runs">{{row.whitelist_x_dcs_runs}} runs<br><small>{{row.whitelist_x_dcs_events}} events</small></td>
+          <td v-if="columns.raw_x_dcs_runs">{{row.raw_x_dcs_runs}} runs<br><small>{{row.raw_x_dcs_events}} events</small></td>
+          <td v-if="columns.whitelist_and_raw_x_dcs_runs">
+            <template v-if="row.whitelist_and_raw_x_dcs_surplus_runs">
+              Surplus {{row.whitelist_and_raw_x_dcs_surplus_runs}} runs<br>
+            </template>
+            <template v-if="row.whitelist_and_raw_x_dcs_missing_runs">
+              Missing {{row.whitelist_and_raw_x_dcs_missing_runs}} runs<br>
+            </template>
+          </td>
+          <td v-if="columns.twiki" >{{row.twiki_runs}} runs</td>
+          <td v-if="columns.twiki" >
+            <template v-if="row.twiki_and_whitelist_surplus_runs">
+              Surplus {{row.twiki_and_whitelist_surplus_runs}} runs<br>
+            </template>
+            <template v-if="row.twiki_and_whitelist_missing_runs">
+              Missing {{row.twiki_and_whitelist_missing_runs}} runs<br>
+            </template>
+          </td>
+          <template v-if="columns.aod">
+            <td :class="row['aod_dataset_status'] == 'PRODUCTION' ? 'orange-cell' : ''">
+              <a target="_blank" :href="makeDASLink(row['aod_dataset'])">{{row['aod_dataset']}}</a>
+              <br>
+              <small><a target="_blank" :href="makeDimaLink(row['aod_prepid'])">{{row['aod_prepid']}}</a></small>
+            </td>
+            <template v-if="row['aod_dataset']">
+              <td v-if="columns.diff_produced_vs_parent">
+                <template v-if="row['aod_vs_parent_surplus_runs']">
+                  Surplus {{row['aod_vs_parent_surplus_runs']}} runs<br>
+                </template>
+                <template v-if="row['aod_vs_parent_missing_runs']">
+                  Missing {{row['aod_vs_parent_missing_runs']}} runs<br>
+                </template>
+                <template v-if="row['aod_events'] > row['whitelist_events']">
+                  Surplus {{row['aod_events'] - row['whitelist_events']}} events
+                </template>
+                <template v-if="row['aod_events'] < row['whitelist_events']">
+                  Missing {{row['whitelist_events'] - row['aod_events']}} events
+                </template>
+              </td>
+              <td v-if="columns.produced_expected">
+                {{row['aod_produced_vs_parent_ratio']}}
+                <br>
+                <small>{{row['aod_events']}} events</small>
+              </td>
+            </template>
+            <template v-else>
+              <td v-if="columns.diff_produced_vs_parent"></td>
+              <td v-if="columns.produced_expected"></td>
+            </template>
+          </template>
+
+          <template v-if="columns.miniaod_v1">
+            <td :class="row['miniaod_v1_dataset_status'] == 'PRODUCTION' ? 'orange-cell' : ''">
+              <a target="_blank" :href="makeDASLink(row['miniaod_v1_dataset'])">{{row['miniaod_v1_dataset']}}</a>
+              <br>
+              <small><a target="_blank" :href="makeDimaLink(row['miniaod_v1_prepid'])">{{row['miniaod_v1_prepid']}}</a></small>
+            </td>
+            <template v-if="row['miniaod_v1_dataset']">
+              <td v-if="columns.diff_produced_vs_parent">
+                <template v-if="row['miniaod_v1_vs_parent_surplus_runs']">
+                  Surplus {{row['miniaod_v1_vs_parent_surplus_runs']}} runs<br>
+                </template>
+                <template v-if="row['miniaod_v1_vs_parent_missing_runs']">
+                  Missing {{row['miniaod_v1_vs_parent_missing_runs']}} runs<br>
+                </template>
+                <template v-if="row['miniaod_v1_events'] > row['aod_events']">
+                  Surplus {{row['miniaod_v1_events'] - row['aod_events']}} events
+                </template>
+                <template v-if="row['miniaod_v1_events'] < row['aod_events']">
+                  Missing {{row['aod_events'] - row['miniaod_v1_events']}} events
+                </template>
+              </td>
+              <td v-if="columns.produced_expected">
+                {{row['miniaod_v1_produced_vs_parent_ratio']}}
+                <br>
+                <small>{{row['miniaod_v1_events']}} events</small>
+              </td>
+            </template>
+            <template v-else>
+              <td v-if="columns.diff_produced_vs_parent"></td>
+              <td v-if="columns.produced_expected"></td>
+            </template>
+          </template>
+
+          <template v-if="columns.miniaod_v1_nanoaod_v8">
+            <td :class="row['miniaod_v1_nanoaod_v8_dataset_status'] == 'PRODUCTION' ? 'orange-cell' : ''">
+              <a target="_blank" :href="makeDASLink(row['miniaod_v1_nanoaod_v8_dataset'])">{{row['miniaod_v1_nanoaod_v8_dataset']}}</a>
+              <br>
+              <small><a target="_blank" :href="makeDimaLink(row['miniaod_v1_nanoaod_v8_prepid'])">{{row['miniaod_v1_nanoaod_v8_prepid']}}</a></small>
+            </td>
+            <template v-if="row['miniaod_v1_nanoaod_v8_dataset']">
+              <td v-if="columns.diff_produced_vs_parent">
+                <template v-if="row['miniaod_v1_nanoaod_v8_vs_parent_surplus_runs']">
+                  Surplus {{row['miniaod_v1_nanoaod_v8_vs_parent_surplus_runs']}} runs<br>
+                </template>
+                <template v-if="row['miniaod_v1_nanoaod_v8_vs_parent_missing_runs']">
+                  Missing {{row['miniaod_v1_nanoaod_v8_vs_parent_missing_runs']}} runs<br>
+                </template>
+                <template v-if="row['miniaod_v1_nanoaod_v8_events'] > row['miniaod_v1_events']">
+                  Surplus {{row['miniaod_v1_nanoaod_v8_events'] - row['miniaod_v1_events']}} events
+                </template>
+                <template v-if="row['miniaod_v1_nanoaod_v8_events'] < row['miniaod_v1_events']">
+                  Missing {{row['miniaod_v1_events'] - row['miniaod_v1_nanoaod_v8_events']}} events
+                </template>
+              </td>
+              <td v-if="columns.produced_expected">
+                {{row['miniaod_v1_nanoaod_v8_produced_vs_parent_ratio']}}
+                <br>
+                <small>{{row['miniaod_v1_nanoaod_v8_events']}} events</small>
+              </td>
+            </template>
+            <template v-else>
+              <td v-if="columns.diff_produced_vs_parent"></td>
+              <td v-if="columns.produced_expected"></td>
+            </template>
+          </template>
+
+          <template v-if="columns.miniaod_v2">
+            <td :class="row['miniaod_v2_dataset_status'] == 'PRODUCTION' ? 'orange-cell' : ''">
+              <a target="_blank" :href="makeDASLink(row['miniaod_v2_dataset'])">{{row['miniaod_v2_dataset']}}</a>
+              <br>
+              <small><a target="_blank" :href="makeDimaLink(row['miniaod_v2_prepid'])">{{row['miniaod_v2_prepid']}}</a></small>
+            </td>
+            <template v-if="row['miniaod_v2_dataset']">
+              <td v-if="columns.diff_produced_vs_parent">
+                <template v-if="row['miniaod_v2_vs_parent_surplus_runs']">
+                  Surplus {{row['miniaod_v2_vs_parent_surplus_runs']}} runs<br>
+                </template>
+                <template v-if="row['miniaod_v2_vs_parent_missing_runs']">
+                  Missing {{row['miniaod_v2_vs_parent_missing_runs']}} runs<br>
+                </template>
+                <template v-if="row['miniaod_v2_events'] > row['aod_events']">
+                  Surplus {{row['miniaod_v2_events'] - row['aod_events']}} events
+                </template>
+                <template v-if="row['miniaod_v2_events'] < row['aod_events']">
+                  Missing {{row['aod_events'] - row['miniaod_v2_events']}} events
+                </template>
+              </td>
+              <td v-if="columns.produced_expected">
+                {{row['miniaod_v2_produced_vs_parent_ratio']}}
+                <br>
+                <small>{{row['miniaod_v2_events']}} events</small>
+              </td>
+            </template>
+            <template v-else>
+              <td v-if="columns.diff_produced_vs_parent"></td>
+              <td v-if="columns.produced_expected"></td>
+            </template>
+          </template>
+
+          <template v-if="columns.miniaod_v2_nanoaod_v9">
+            <td :class="row['miniaod_v2_nanoaod_v9_dataset_status'] == 'PRODUCTION' ? 'orange-cell' : ''">
+              <a target="_blank" :href="makeDASLink(row['miniaod_v2_nanoaod_v9_dataset'])">{{row['miniaod_v2_nanoaod_v9_dataset']}}</a>
+              <br>
+              <small><a target="_blank" :href="makeDimaLink(row['miniaod_v2_nanoaod_v9_prepid'])">{{row['miniaod_v2_nanoaod_v9_prepid']}}</a></small>
+            </td>
+            <template v-if="row['miniaod_v2_nanoaod_v9_dataset']">
+              <td v-if="columns.diff_produced_vs_parent">
+                <template v-if="row['miniaod_v2_nanoaod_v9_vs_parent_surplus_runs']">
+                  Surplus {{row['miniaod_v2_nanoaod_v9_vs_parent_surplus_runs']}} runs<br>
+                </template>
+                <template v-if="row['miniaod_v2_nanoaod_v9_vs_parent_missing_runs']">
+                  Missing {{row['miniaod_v2_nanoaod_v9_vs_parent_missing_runs']}} runs<br>
+                </template>
+                <template v-if="row['miniaod_v2_nanoaod_v9_events'] > row['miniaod_v2_events']">
+                  Surplus {{row['miniaod_v2_nanoaod_v9_events'] - row['miniaod_v2_events']}} events
+                </template>
+                <template v-if="row['miniaod_v2_nanoaod_v9_events'] < row['miniaod_v2_events']">
+                  Missing {{row['miniaod_v2_events'] - row['miniaod_v2_nanoaod_v9_events']}} events
+                </template>
+              </td>
+              <td v-if="columns.produced_expected">
+                {{row['miniaod_v2_nanoaod_v9_produced_vs_parent_ratio']}}
+                <br>
+                <small>{{row['miniaod_v2_nanoaod_v9_events']}} events</small>
+              </td>
+            </template>
+            <template v-else>
+              <td v-if="columns.diff_produced_vs_parent"></td>
+              <td v-if="columns.produced_expected"></td>
+            </template>
+          </template>
+        </tr>
+      </table>
+    </div>
+
+    <script>
+      var app = new Vue({
+        el: '#app',
+        data: {
+          data: [],
+          rows: [],
+          sortOn: 'year',
+          sortOrder: 1,
+          prefixes: ['aod', 'miniaod_v1', 'miniaod_v1_nanoaod_v8', 'miniaod_v2', 'miniaod_v2_nanoaod_v9'],
+          search: {
+            input_dataset: undefined,
+            aod_dataset: undefined,
+            miniaod_v1_dataset: undefined,
+            miniaod_v2_dataset: undefined,
+            miniaod_v1_nanoaod_v8_dataset: undefined,
+            miniaod_v2_nanoaod_v9_dataset: undefined,
+          },
+          columns: {
+            primary_dataset: true,
+            whitelist_runs: true,
+            whitelist_x_dcs_runs: true,
+            raw_x_dcs_runs: true,
+            whitelist_and_raw_x_dcs_runs: true,
+            twiki: true,
+            diff_produced_vs_parent: true,
+            produced_expected: true,
+            aod: true,
+            miniaod_v1: true,
+            miniaod_v1_nanoaod_v8: true,
+            miniaod_v2: true,
+            miniaod_v2_nanoaod_v9: true,
+          },
+          lastUpdate: undefined,
+        },
+        created (){
+          let urlParams = Object.fromEntries(new URLSearchParams(window.location.search));
+          this.search.input_dataset = urlParams.input_dataset;
+          this.search.aod_dataset = urlParams.aod_dataset;
+          this.search.miniaod_v1_dataset = urlParams.miniaod_v1_dataset;
+          this.search.miniaod_v2_dataset = urlParams.miniaod_v2_dataset;
+          this.search.miniaod_v1_nanoaod_v8_dataset = urlParams.miniaod_v1_nanoaod_v8_dataset;
+          this.search.miniaod_v2_nanoaod_v9_dataset = urlParams.miniaod_v2_nanoaod_v9_dataset;
+
+          this.sortOn = urlParams.sort_on || 'year';
+          this.sortOrder = parseInt(urlParams.sort_order || 1);
+
+          const component = this;
+          $.get( "data_original_table.json", function( data ) {
+            component.data = data;
+            component.applyFilters();
+            component.rows = component.rows.sort(component.sortComparator);
+          }).fail(function(err) {
+            alert("Error getting data: " + err.statusText);
+          });
+          $.get( "original_table_timestamp.txt", function( data ) {
+            component.lastUpdate = data;
+          });
+        },
+        methods: {
+          sortComparator: function(a, b) {
+            if (a[this.sortOn] === null && b[this.sortOn] === null) {
+              return 0;
+            }
+            // nulls go at the end
+            if (a[this.sortOn] === null) {
+              return 1; //this.sortOrder;
+            }
+            if (b[this.sortOn] === null) {
+              return -1; //-this.sortOrder;
+            }
+            // Compare normal values
+            if (a[this.sortOn] < b[this.sortOn]) {
+              return -this.sortOrder;
+            }
+            if (a[this.sortOn] > b[this.sortOn]) {
+              return this.sortOrder;
+            }
+            return a['input_dataset'] > b['input_dataset'] ? this.sortOrder : -this.sortOrder;
+          },
+          changeSortToColumn: function(column) {
+            if (column == this.sortOn) {
+                this.sortOrder *= -1;
+            } else {
+                this.sortOn = column;
+                this.sortOrder = 1;
+            }
+            this.rows = this.rows.sort(this.sortComparator);
+            let urlParams = Object.fromEntries(new URLSearchParams(window.location.search));
+            if (this.sortOrder != 1) {
+              urlParams['sort_order'] = this.sortOrder;
+            } else {
+              delete urlParams['sort_order'];
+            }
+            if (this.sortOn != 'year') {
+              urlParams['sort_on'] = this.sortOn;
+            } else {
+              delete urlParams['sort_on'];
+            }
+            this.replaceQuery(urlParams);
+          },
+          applyFilters: function() {
+            let filteredRows = this.data;
+            let urlParams = Object.fromEntries(new URLSearchParams(window.location.search));
+            for (let attribute in this.search) {
+              if (this.search[attribute]) {
+                let negate = false;
+                let pattern = this.search[attribute];
+                if (pattern == '-' || pattern == '!') {
+                  continue
+                }
+                if (pattern[0] == '-' || pattern[0] == '!') {
+                  negate = true;
+                  pattern = pattern.substring(1);
+                  this.search[attribute] = '!' + pattern;
+                }
+                pattern = pattern.replace(/\.\*/g, '*').replace(/ /g, '*').replace(/\*/g, '.*');
+                const regex = RegExp(pattern, 'i'); // 'i' for case insensitivity
+                const filterFunc = function(entry) {
+                  const value = entry[attribute];
+                  if (value == undefined || value == '') {
+                    // If negating, empty value should be shown
+                    return negate;
+                  }
+                  return regex.test(value) ^ negate;
+                }
+                filteredRows = filteredRows.filter(filterFunc);
+                urlParams[attribute] = this.search[attribute];
+              } else {
+                delete urlParams[attribute]
+              }
+            }
+            this.rows = filteredRows;
+            this.replaceQuery(urlParams);
+          },
+          replaceQuery: function(urlParams) {
+            let urlQuery = new URLSearchParams(urlParams).toString();
+            if (urlQuery) {
+              urlQuery = '?' + urlQuery;
+              urlQuery = decodeURI(urlQuery);
+            }
+            let newUrl = window.location.protocol + "//" + window.location.host + window.location.pathname + urlQuery;
+            window.history.replaceState({path: newUrl}, '', newUrl);
+          },
+          makeDASLink(dataset) {
+            return 'https://cmsweb.cern.ch/das/request?view=list&limit=50&instance=prod%2Fglobal&input=dataset%3D' + dataset;
+          },
+          makeDimaLink(prepid) {
+            return 'https://dmytro.web.cern.ch/dmytro/cmsprodmon/workflows.php?prep_id=' + prepid;
+          }
+        }
+      })
+    </script>
+  </body>
+</html>

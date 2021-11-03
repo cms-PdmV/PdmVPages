@@ -1,0 +1,329 @@
+
+<html>
+  <head>
+    <title>CMS Main Monte Carlo Background Samples - UL</title>
+    <script src="https://cdn.jsdelivr.net/npm/vue@2"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/css/bootstrap.min.css">
+    <link rel="icon" type="image/png" href="pdmv.png" />
+    <style>
+      body {
+        background: #fafafa;
+      }
+      td, th {
+        border: 1px #aaa solid;
+        padding: 2px 4px;
+        font-size: 0.9em;
+        text-align: center;
+        white-space: nowrap;
+      }
+      th {
+        text-align: center;
+        background: #eee;
+      }
+      tr {
+        height: 30px;
+        background: white;
+      }
+      tr:hover {
+        background: #eee !important;
+      }
+      table {
+        margin-left: auto;
+        margin-right: auto;
+        margin-bottom: 40px;
+        margin-top: 20px;
+        border-collapse: collapse;
+      }
+      .sort {
+        cursor: pointer;
+      }
+      input {
+        width: 98%;
+        margin: auto;
+        margin-bottom: 2px;
+        border: 1px solid black;
+        padding-left: 4px;
+        padding-right: 4px;
+      }
+      .sorted-by {
+        background: #c8c8c8;
+      }
+      a {
+        color: #005eb6;
+      }
+      .done-background {
+        background-color: rgba(30, 150, 30, 0.18);
+      }
+      .submitted-background {
+        background-color: rgba(0, 90, 255, 0.18);
+      }
+      .approved-background {
+        background-color: rgba(240, 120, 0, 0.33);
+      }
+      .defined-background {
+        background-color: rgba(220, 220, 0, 0.43);
+      }
+      .validation-background {
+        background-color: rgba(255, 0, 255, 0.23);
+      }
+      .new-background {
+        background-color: rgba(0, 0, 0, 0.1);
+      }
+
+      .not_exist-background {
+        background-color: #e74c3c;
+        color: white;
+        animation-name: not-exist-pulse;
+        animation-duration: 2s;
+        animation-iteration-count: infinite;
+      }
+
+      @keyframes not-exist-pulse {
+        0% {
+          color: #e74c3c;
+          background-color: white;
+        }
+        50% {
+          color: white;
+          background-color: #e74c3c;
+        }
+        100% {
+          color: #e74c3c;
+          background-color: white;
+        }
+      }
+
+      /* Row number in table */
+      tbody tr {
+        counter-increment: rowNumber;
+      }
+      tbody tr td:first-child::before {
+        content: counter(rowNumber) ". ";
+        min-width: 1em;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app">
+      <h3 style="text-align: center; margin-top: 20px;">CMS Main Monte Carlo Background Samples - UL</h3>
+      <small style="text-align: center; margin-top: -12px; display: block"><i>proudly made by Jordan Martins</i></small>
+      <div style="text-align:center;">
+        <a href="https://pdmv-pages.web.cern.ch/">PdmV pages</a>
+      </div>
+      <div style="text-align: center; margin: 8px;">
+        Updated: {{lastUpdate}}
+      </div>
+      <table>
+        <tr>
+          <th></th>
+          <th :class="sortOn == 'dataset' ? 'sorted-by' : ''">
+            <span class="sort" @click="changeSortToColumn('dataset')">
+              Dataset
+            </span>
+            <br>
+            <input type="text" class="header-search" placeholder="Type to search..." v-model="search.dataset" @input="applyFilters()">
+          </th>
+          <th :class="sortOn == 'root_prepid' ? 'sorted-by' : ''">
+            <span class="sort" @click="changeSortToColumn('root_prepid')">
+                Root PrepID
+            </span>
+            <br>
+            <input type="text" class="header-search" placeholder="Type to search..." v-model="search.root_prepid" @input="applyFilters()">
+          </th>
+          <th>
+            Root Status
+          </th>
+          <th :class="sortOn == 'mini' ? 'sorted-by' : ''">
+            <span class="sort" @click="changeSortToColumn('mini')">
+                Mini PrepID
+            </span>
+            <br>
+            <input type="text" class="header-search" placeholder="Type to search..." v-model="search.mini" @input="applyFilters()">
+          </th>
+          <th>
+            Mini Status
+          </th>
+          <th>
+            Mini Completed Events
+          </th>
+          <th :class="sortOn == 'nano' ? 'sorted-by' : ''">
+            <span class="sort" @click="changeSortToColumn('nano')">
+                Nano PrepID
+            </span>
+            <br>
+            <input type="text" class="header-search" placeholder="Type to search..." v-model="search.nano" @input="applyFilters()">
+          </th>
+          <th>
+            Nano Status
+          </th>
+          <th>
+            Nano Completed Events
+          </th>
+        </tr>
+        <tbody>
+          <tr v-for="row in rows">
+            <td></td>
+            <td>{{row.dataset}}</td>
+            <td><a target="_blank" :href="makeMcMLink(row.root_prepid)">{{row.root_prepid}}</a></td>
+            <td :class="row.status + '-background'">{{row.status}}</td>
+            <td><a target="_blank" :href="makeMcMLink(row.mini)">{{row.mini}}</a></td>
+            <td :class="row.mini_status + '-background'">{{row.mini_status}}</td>
+            <td>{{row.mini_completed_events.toLocaleString('en-US')}}</td>
+            <td><a target="_blank" :href="makeMcMLink(row.nano)">{{row.nano}}</a></td>
+            <td :class="row.nano_status + '-background'">{{row.nano_status}}</td>
+            <td>{{row.nano_completed_events.toLocaleString('en-US')}}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <script>
+      var app = new Vue({
+        el: '#app',
+        data: {
+          data: [],
+          rows: [],
+          defaultSortOn: 'dataset',
+          sortOn: undefined,
+          sortOrder: 1,
+          search: {
+            dataset: undefined,
+            root_prepid: undefined,
+            mini: undefined,
+            nano: undefined,
+          },
+          lastUpdate: undefined,
+        },
+        created (){
+          let urlParams = Object.fromEntries(new URLSearchParams(window.location.search));
+          for (let key in this.search) {
+            this.search[key] = urlParams[key];
+          }
+          this.sortOn = urlParams.sort_on || this.defaultSortOn;
+          this.sortOrder = parseInt(urlParams.sort_order || 1);
+
+          const component = this;
+          $.get("data.json", function( data ) {
+            component.data = data;
+            component.applyFilters();
+            component.rows = component.rows.sort(component.sortComparator);
+          });
+          $.get("update_timestamp.txt", function( data ) {
+            component.lastUpdate = data;
+          });
+        },
+        methods: {
+          sortComparator: function(a, b) {
+            if (a[this.sortOn] === null && b[this.sortOn] === null) {
+              return 0;
+            }
+            // nulls go at the end
+            if (a[this.sortOn] === null) {
+              return 1; //this.sortOrder;
+            }
+            if (b[this.sortOn] === null) {
+              return -1; //-this.sortOrder;
+            }
+            // Compare normal values
+            if (a[this.sortOn] < b[this.sortOn]) {
+              return -this.sortOrder;
+            }
+            if (a[this.sortOn] > b[this.sortOn]) {
+              return this.sortOrder;
+            }
+            return a[this.defaultSortOn] > b[this.defaultSortOn] ? this.sortOrder : -this.sortOrder;
+          },
+          changeSortToColumn: function(column) {
+            if (column == this.sortOn) {
+                this.sortOrder *= -1;
+            } else {
+                this.sortOn = column;
+                this.sortOrder = 1;
+            }
+            let sortedRows = this.rows.sort(this.sortComparator);
+            // this.mergeCells(sortedRows);
+            this.rows = sortedRows;
+            let urlParams = Object.fromEntries(new URLSearchParams(window.location.search));
+            if (this.sortOrder != 1) {
+              urlParams['sort_order'] = this.sortOrder;
+            } else {
+              delete urlParams['sort_order'];
+            }
+            if (this.sortOn != this.defaultSortOn) {
+              urlParams['sort_on'] = this.sortOn;
+            } else {
+              delete urlParams['sort_on'];
+            }
+            this.replaceQuery(urlParams);
+          },
+          applyFilters: function() {
+            let filteredRows = this.data;
+            let urlParams = Object.fromEntries(new URLSearchParams(window.location.search));
+            for (let attribute in this.search) {
+              if (this.search[attribute]) {
+                let negate = false;
+                let pattern = this.search[attribute];
+                if (pattern == '-' || pattern == '!') {
+                  continue
+                }
+                if (pattern[0] == '-' || pattern[0] == '!') {
+                  negate = true;
+                  pattern = pattern.substring(1);
+                  this.search[attribute] = '!' + pattern;
+                }
+                pattern = pattern.replace(/\.\*/g, '*').replace(/ /g, '*').replace(/\*/g, '.*');
+                const regex = RegExp(pattern, 'i'); // 'i' for case insensitivity
+                const filterFunc = function(entry) {
+                  const value = entry[attribute];
+                  if (value == undefined || value == '') {
+                    // If negating, empty value should be shown
+                    return negate;
+                  }
+                  return regex.test(value) ^ negate;
+                }
+                filteredRows = filteredRows.filter(filterFunc);
+                urlParams[attribute] = this.search[attribute];
+              } else {
+                delete urlParams[attribute]
+              }
+            }
+            // this.mergeCells(filteredRows);
+            this.rows = filteredRows;
+            this.replaceQuery(urlParams);
+          },
+          replaceQuery: function(urlParams) {
+            let urlQuery = new URLSearchParams(urlParams).toString();
+            if (urlQuery) {
+              urlQuery = '?' + urlQuery;
+              urlQuery = decodeURI(urlQuery);
+            }
+            let newUrl = window.location.protocol + "//" + window.location.host + window.location.pathname + urlQuery;
+            window.history.replaceState({path: newUrl}, '', newUrl);
+          },
+          mergeCells: function(list) {
+            list.forEach(row => {
+              for (let item of row) {
+                item.rowspan = 1;
+              }
+            });
+            for (let i = list.length - 1; i > 0; i--) {
+              let thisEntry = list[i];
+              let otherEntry = list[i - 1];
+              for (let j = 0; j < Math.min(thisEntry.length, otherEntry.length); j++) {
+                if (thisEntry[j]['dataset'] !== otherEntry[j]['dataset']) {
+                  break
+                }
+                otherEntry[j].rowspan += thisEntry[j].rowspan;
+                thisEntry[j].rowspan = 0;
+              }
+            }
+          },
+          makeMcMLink(prepid) {
+            return 'https://cms-pdmv.cern.ch/mcm/requests?prepid=' + prepid;
+          }
+        }
+      })
+    </script>
+  </body>
+</html>

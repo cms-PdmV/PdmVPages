@@ -1,0 +1,470 @@
+<html>
+  <head>
+    <title>PdmV ReReco UL</title>
+    <script src="https://cdn.jsdelivr.net/npm/vue@2"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/css/bootstrap.min.css">
+    <link rel="icon" type="image/png" href="pdmv.png" />
+    <style>
+      body {
+        background: #fafafa;
+      }
+      td, th {
+        border: 1px #aaa solid;
+        padding: 2px 4px;
+        font-size: 0.9em;
+        text-align: center;
+        white-space: nowrap;
+      }
+      th {
+        text-align: center;
+        background: #eee;
+      }
+      tr {
+        height: 30px;
+        background: white;
+      }
+      table {
+        margin-left: auto;
+        margin-right: auto;
+        margin-bottom: 40px;
+        margin-top: 20px;
+        border-collapse: collapse;
+      }
+      .sort {
+        cursor: pointer;
+      }
+      input {
+        width: 98%;
+        margin: auto;
+        margin-bottom: 2px;
+        border: 1px solid black;
+        padding-left: 4px;
+        padding-right: 4px;
+      }
+      input[type=checkbox] {
+        width: unset;
+      }
+      .sorted-by {
+        background: #c8c8c8;
+      }
+      .orange-cell {
+        background: #ffb732;
+      }
+      .green-cell {
+        background: #bae0ce;
+      }
+      .light-green-cell {
+        background: #fce8b2;
+      }
+      .light-red-cell {
+        background: #f2c7c4;
+      }
+      a {
+        color: #005eb6;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app">
+      <h3 style="text-align: center; margin-top: 20px;">PdmV ReReco UL <i style="color: red">full</i> table</h3>
+      <div style="text-align:center;">
+        <a href="https://pdmv-pages.web.cern.ch/">PdmV pages</a> | <a href="index.html">User table</a>
+      </div>
+      <div style="text-align: center; margin: 8px;">
+        Campaigns:
+        <template v-for="(_, campaign) in campaigns">
+          <input
+            type="checkbox"
+            :checked="campaigns[campaign]"
+            @input="campaigns[campaign] = $event.target.checked; applyFilters()"
+          /> {{campaign}}
+        </template>
+        <br>
+        Columns:
+        <template v-for="(_, column) in columns">
+          <input
+            type="checkbox"
+            :checked="columns[column]"
+            @input="columns[column] = $event.target.checked; applyFilters()"
+          /> {{column}}
+        </template>
+        <br>
+        Updated: {{lastUpdate}}
+      </div>
+      <table>
+        <tr>
+          <th rowspan="2">
+            <span class="sort" @click="changeSortToColumn('year')">Year</span>
+          </th>
+          <th rowspan="2">
+            <span class="sort" @click="changeSortToColumn('raw_dataset')">RAW dataset</span>
+            <br>
+            <input type="text" class="header-search" placeholder="Type to search..." v-model="search.dataset" @input="applyFilters()">
+          </th>
+          <th rowspan="2" v-if="columns.raw_x_dcs_runs">
+            RAW x DCS Runs
+            <br>
+            <small>RAW x DCS Events</small>
+            <br>
+            <i>Expected</i>
+          </th>
+          <th rowspan="2" v-if="columns.whitelist_runs">
+            Whitelist Runs
+            <br>
+            <small>Whitelist events</small>
+          </th>
+          <th rowspan="2" v-if="columns.whitelist_x_dcs_runs">
+            Whitelist x DCS Runs
+            <br>
+            <small>Whitelist x DCS events</small>
+          </th>
+          <th :colspan="columns.fraction && columns.diff_to_parent ? 3 : columns.fraction || columns.diff_to_parent ? 2 : 1" v-if="columns.aod">
+            AOD
+          </th>
+          <th :colspan="columns.fraction && columns.diff_to_parent ? 3 : columns.fraction || columns.diff_to_parent ? 2 : 1" v-if="columns.miniaod">
+            MiniAOD
+          </th>
+          <th :colspan="columns.fraction && columns.diff_to_parent ? 3 : columns.fraction || columns.diff_to_parent ? 2 : 1" v-if="columns.nanoaod">
+            NanoAOD
+          </th>
+        </tr>
+        <tr>
+          <th v-if="columns.aod">
+            <small>PrepID</small>
+            <br>
+            <span class="sort" @click="changeSortToColumn('aod_dataset')">Dataset</span>
+            <br>
+            <small>Runs | events | processing string | campaign</small>
+            <br>
+            <input type="text" class="header-search" placeholder="Type to search..." v-model="search.aod_dataset" @input="applyFilters()">
+          </th>
+          <th v-if="columns.aod && columns.fraction">
+            <span class="sort" @click="changeSortToColumn('aod_fraction')">Fraction</span>
+          </th>
+          <th v-if="columns.aod && columns.diff_to_parent">Diff to RAW x DCS</th>
+          <th v-if="columns.miniaod">
+            <small>PrepID</small>
+            <br>
+            <span class="sort" @click="changeSortToColumn('miniaod_dataset')">Dataset</span>
+            <br>
+            <small>Runs | events | processing string | campaign</small>
+            <br>
+            <input type="text" class="header-search" placeholder="Type to search..." v-model="search.miniaod_dataset" @input="applyFilters()">
+          </th>
+          <th v-if="columns.miniaod && columns.fraction">
+            <span class="sort" @click="changeSortToColumn('miniaod_fraction')">Fraction</span>
+          </th>
+          <th v-if="columns.miniaod && columns.diff_to_parent">Diff to parent</th>
+          <th v-if="columns.nanoaod">
+            <small>PrepID</small>
+            <br>
+            <span class="sort" @click="changeSortToColumn('nanoaod_dataset')">Dataset</span>
+            <br>
+            <small>Runs | events | processing string | campaign</small>
+            <br>
+            <input type="text" class="header-search" placeholder="Type to search..." v-model="search.nanoaod_dataset" @input="applyFilters()">
+          </th>
+          <th v-if="columns.nanoaod && columns.fraction">
+            <span class="sort" @click="changeSortToColumn('nanoaod_fraction')">Fraction</span>
+          </th>
+          <th v-if="columns.nanoaod && columns.diff_to_parent">Diff to parent</th>
+        </tr>
+        <tr v-for="row in rows">
+          <template v-for="(item, index) in row">
+            <template v-if="item.year && item.rowspan">
+              <td :rowspan="item.rowspan">
+                {{item.year}}
+              </td>
+              <td :rowspan="item.rowspan">
+                <a target="_blank" :href="makeDASLink(item.dataset)">{{item.dataset}}</a>
+                <br>
+                <small>{{item.runs}}&nbsp;runs | {{item.events}}&nbsp;events</small>
+              </td>
+            </template>
+            <template v-if="!item.year && item.rowspan">
+              <template v-if="item.whitelist_runs != undefined">
+                <td :rowspan="item.rowspan" v-if="columns.raw_x_dcs_runs">
+                  {{item.raw_x_dcs_runs}} runs<br><small>{{item.raw_x_dcs_events}} events</small>
+                </td>
+                <td :rowspan="item.rowspan" v-if="columns.whitelist_runs">
+                  {{item.whitelist_runs}} runs<br><small>{{item.whitelist_events}} events</small>
+                  <template v-if="item.whitelist_and_raw_x_dcs_surplus_runs">
+                    <br>
+                    <small style="color: green">+{{item.whitelist_and_raw_x_dcs_surplus_runs}} runs</small>
+                  </template>
+                  <template v-if="item.whitelist_and_raw_x_dcs_missing_runs">
+                    <br>
+                    <small style="color: red">-{{item.whitelist_and_raw_x_dcs_missing_runs}} runs</small>
+                  </template>
+                  <template v-if="item.whitelist_and_raw_x_dcs_events_diff > 0">
+                    <br>
+                    <small style="color: green">+{{item.whitelist_and_raw_x_dcs_events_diff}} events</small>
+                  </template>
+                  <template v-if="item.whitelist_and_raw_x_dcs_events_diff < 0">
+                    <br>
+                    <small style="color: red">{{item.whitelist_and_raw_x_dcs_events_diff}} events</small>
+                  </template>
+                </td>
+                <td :rowspan="item.rowspan" v-if="columns.whitelist_x_dcs_runs">
+                  {{item.whitelist_x_dcs_runs}} runs<br><small>{{item.whitelist_x_dcs_events}} events</small>
+                  <template v-if="item.whitelist_x_dcs_and_raw_x_dcs_surplus_runs">
+                    <br>
+                    <small style="color: green">+{{item.whitelist_x_dcs_and_raw_x_dcs_surplus_runs}} runs</small>
+                  </template>
+                  <template v-if="item.whitelist_x_dcs_and_raw_x_dcs_missing_runs">
+                    <br>
+                    <small style="color: red">-{{item.whitelist_x_dcs_and_raw_x_dcs_missing_runs}} runs</small>
+                  </template>
+                  <template v-if="item.whitelist_x_dcs_and_raw_x_dcs_events_diff > 0">
+                    <br>
+                    <small style="color: green">+{{item.whitelist_x_dcs_and_raw_x_dcs_events_diff}} events</small>
+                  </template>
+                  <template v-if="item.whitelist_x_dcs_and_raw_x_dcs_events_diff < 0">
+                    <br>
+                    <small style="color: red">{{item.whitelist_x_dcs_and_raw_x_dcs_events_diff}} events</small>
+                  </template>
+                </td>
+              </template>
+              <td :rowspan="item.rowspan" :class="cellColor(item)" v-if="index == 1 && columns.aod || index == 2 && columns.miniaod || index == 3 && columns.nanoaod">
+                <small><a target="_blank" :href="makeStatsLink(item.prepid)">{{item.prepid}}</a></small>
+                <br>
+                <a target="_blank" :href="makeDASLink(item.dataset)">{{item.dataset}}</a>
+                <br>
+                <small>{{item.runs}}&nbsp;runs | {{item.events}}&nbsp;events | {{item.processing_string}} | {{item.campaign}}</small>
+              </td>
+              <td :rowspan="item.rowspan" :class="cellColor(item)" v-if="columns.fraction && (index == 1 && columns.aod || index == 2 && columns.miniaod || index == 3 && columns.nanoaod)">
+                {{item.fraction}}
+              </td>
+              <td :rowspan="item.rowspan" :class="cellColor(item)" v-if="columns.diff_to_parent && (index == 1 && columns.aod || index == 2 && columns.miniaod || index == 3 && columns.nanoaod)">
+                <template v-if="item.missing_runs">
+                  -{{item.missing_runs}} runs<br>
+                </template>
+                <template v-if="item.surplus_runs">
+                  +{{item.surplus_runs}} runs<br>
+                </template>
+                <template v-if="item.events_difference < 0">
+                  -{{-item.events_difference}} events
+                </template>
+                <template v-if="item.events_difference > 0">
+                  +{{item.events_difference}} events
+                </template>
+              </td>
+            </template>
+          </template>
+        </tr>
+      </table>
+    </div>
+
+    <script>
+      var app = new Vue({
+        el: '#app',
+        data: {
+          data: [],
+          rows: [],
+          sortOn: 'year',
+          sortOrder: 1,
+          campaigns: {},
+          columns: {
+            raw_x_dcs_runs: true,
+            whitelist_runs: true,
+            whitelist_x_dcs_runs: true,
+            aod: true,
+            miniaod: true,
+            nanoaod: true,
+            fraction: true,
+            diff_to_parent: true
+          },
+          search: {
+            dataset: undefined,
+            aod_dataset: undefined,
+            miniaod_dataset: undefined,
+            nanoaod_dataset: undefined,
+          },
+          lastUpdate: undefined,
+        },
+        created (){
+          let urlParams = Object.fromEntries(new URLSearchParams(window.location.search));
+          this.search.dataset = urlParams.dataset;
+          this.search.aod_dataset = urlParams.aod_dataset;
+          this.search.miniaod_dataset = urlParams.miniaod_dataset;
+          this.search.nanoaod_dataset = urlParams.nanoaod_dataset;
+          this.sortOn = urlParams.sort_on || 'year';
+          this.sortOrder = parseInt(urlParams.sort_order || 1);
+
+          const component = this;
+          $.get( "data_full_table.json", function( data ) {
+            data.forEach(element => {
+              element.forEach(item => {
+                if (item.fraction) {
+                  // Up to 8 decimal digits
+                  item.fraction = parseFloat(item.fraction.toFixed(8)).toString();
+                }
+                if (item.campaign && !(item.campaign in component.campaigns)) {
+                  component.campaigns[item.campaign] = true;
+                }
+              });
+            });
+            component.data = data;
+            component.applyFilters();
+          }).fail(function(err) {
+            alert("Error getting data: " + err.statusText);
+          });
+          $.get( "original_table_timestamp.txt", function( data ) {
+            component.lastUpdate = data;
+          });
+        },
+        methods: {
+          sortComparator: function(a, b) {
+            let itemA = a[0];
+            let itemB = b[0];
+            if (this.sortOn == 'year') {
+              itemA = a[0] ? a[0]['year'] : null;
+              itemB = b[0] ? b[0]['year'] : null;
+            } else if (this.sortOn == 'aod_dataset' || this.sortOn == 'miniaod_dataset' || this.sortOn == 'nanoaod_dataset') {
+              let index = {'aod_dataset': 1, 'miniaod_dataset': 2, 'nanoaod_dataset': 3}[this.sortOn];
+              itemA = a[index] ? a[index]['dataset'] : null;
+              itemB = b[index] ? b[index]['dataset'] : null;
+            } else if (this.sortOn == 'aod_fraction' || this.sortOn == 'miniaod_fraction' || this.sortOn == 'nanoaod_fraction') {
+              let index = {'aod_fraction': 1, 'miniaod_fraction': 2, 'nanoaod_fraction': 3}[this.sortOn];
+              itemA = a[index] ? a[index]['fraction'] : null;
+              itemB = b[index] ? b[index]['fraction'] : null;
+            }
+            if (itemA === null && itemB === null) {
+              return 0;
+            }
+            // nulls go at the end
+            if (itemA === null) {
+              return 1; //this.sortOrder;
+            }
+            if (itemB === null) {
+              return -1; //-this.sortOrder;
+            }
+            // Compare normal values
+            if (itemA < itemB) {
+              return -this.sortOrder;
+            }
+            if (itemA > itemB) {
+              return this.sortOrder;
+            }
+            return a[0]['dataset'] > b[0]['dataset'] ? this.sortOrder : -this.sortOrder;
+          },
+          changeSortToColumn: function(column) {
+            if (column == this.sortOn) {
+                this.sortOrder *= -1;
+            } else {
+                this.sortOn = column;
+                this.sortOrder = 1;
+            }
+            let sortedRows = this.rows.sort(this.sortComparator);
+            this.mergeCells(sortedRows);
+            this.rows = sortedRows;
+            let urlParams = Object.fromEntries(new URLSearchParams(window.location.search));
+            if (this.sortOrder != 1) {
+              urlParams['sort_order'] = this.sortOrder;
+            } else {
+              delete urlParams['sort_order'];
+            }
+            if (this.sortOn != 'year') {
+              urlParams['sort_on'] = this.sortOn;
+            } else {
+              delete urlParams['sort_on'];
+            }
+            this.replaceQuery(urlParams);
+          },
+          mergeCells: function(list) {
+            list.forEach(row => {
+              for (let item of row) {
+                item.rowspan = 1;
+              }
+            });
+            for (let i = list.length - 1; i > 0; i--) {
+              let thisEntry = list[i];
+              let otherEntry = list[i - 1];
+              for (let j = 0; j < Math.min(thisEntry.length, otherEntry.length); j++) {
+                if (thisEntry[j]['dataset'] !== otherEntry[j]['dataset']) {
+                  break
+                }
+                otherEntry[j].rowspan += thisEntry[j].rowspan;
+                thisEntry[j].rowspan = 0;
+              }
+            }
+          },
+          applyFilters: function() {
+            let filteredRows = this.data;
+            let urlParams = Object.fromEntries(new URLSearchParams(window.location.search));
+            for (let attribute in this.search) {
+              if (this.search[attribute]) {
+                let negate = false;
+                let pattern = this.search[attribute];
+                if (pattern == '-' || pattern == '!') {
+                  continue
+                }
+                if (pattern[0] == '-' || pattern[0] == '!') {
+                  negate = true;
+                  pattern = pattern.substring(1);
+                  this.search[attribute] = '!' + pattern;
+                }
+                let entryIndex = 0;
+                let entryAttribute = attribute;
+                if (attribute == 'aod_dataset' || attribute == 'miniaod_dataset' || attribute == 'nanoaod_dataset') {
+                  entryIndex = {'aod_dataset': 1, 'miniaod_dataset': 2, 'nanoaod_dataset': 3}[attribute];
+                  entryAttribute = 'dataset';
+                }
+                pattern = pattern.replace(/\.\*/g, '*').replace(/ /g, '*').replace(/\*/g, '.*');
+                const regex = RegExp(pattern, 'i'); // 'i' for case insensitivity
+                const filterFunc = function(entry) {
+                  if (entry.length <= entryIndex) {
+                    // If negating, empty value should be shown
+                    return negate;
+                  }
+                  const value = entry[entryIndex][entryAttribute];
+                  return value != '' && (regex.test(value) ^ negate);
+                }
+                filteredRows = filteredRows.filter(filterFunc);
+                urlParams[attribute] = this.search[attribute];
+              } else {
+                delete urlParams[attribute]
+              }
+            }
+            const component = this;
+            filteredRows = filteredRows.filter(element => element.filter(item => item.campaign && component.campaigns[item.campaign] === false).length == 0);
+            // Keep at least one row fow each RAW, even if it's empty
+            // If there are more than one row for a certain RAW, empty rows can be deleted
+            filteredRows = filteredRows.filter((element, index) => index == 0 || element.length > 1 || filteredRows[index - 1][0].dataset != element[0].dataset);
+            this.mergeCells(filteredRows);
+            this.rows = filteredRows;
+            this.replaceQuery(urlParams);
+          },
+          replaceQuery: function(urlParams) {
+            let urlQuery = new URLSearchParams(urlParams).toString();
+            if (urlQuery) {
+              urlQuery = '?' + urlQuery;
+              urlQuery = decodeURI(urlQuery);
+            }
+            let newUrl = window.location.protocol + "//" + window.location.host + window.location.pathname + urlQuery;
+            window.history.replaceState({path: newUrl}, '', newUrl);
+          },
+          makeDASLink(dataset) {
+            return 'https://cmsweb.cern.ch/das/request?view=list&limit=50&instance=prod%2Fglobal&input=dataset%3D' + dataset;
+          },
+          makeStatsLink(prepid) {
+            return 'https://cms-pdmv.cern.ch/stats?prepid=' + prepid;
+          },
+          cellColor(item) {
+            if (item.type == 'PRODUCTION') {
+              return 'orange-cell';
+            }
+            if (item.fraction == 1) {
+              return 'green-cell';
+            }
+            if (item.fraction < 1 && item.fraction >= 0.999) {
+              return 'light-green-cell';
+            }
+            return 'light-red-cell';
+          },
+        }
+      })
+    </script>
+  </body>
+</html>
