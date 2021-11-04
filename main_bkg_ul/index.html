@@ -93,15 +93,6 @@
           background-color: white;
         }
       }
-
-      /* Row number in table */
-      tbody tr {
-        counter-increment: rowNumber;
-      }
-      tbody tr td:first-child::before {
-        content: counter(rowNumber) ". ";
-        min-width: 1em;
-      }
     </style>
   </head>
   <body>
@@ -162,8 +153,8 @@
           </th>
         </tr>
         <tbody>
-          <tr v-for="row in rows">
-            <td></td>
+          <tr v-for="(row, $index) in rows">
+            <td>{{$index + 1}}.</td>
             <td>{{row.dataset}}</td>
             <td><a target="_blank" :href="makeMcMLink(row.root_prepid)">{{row.root_prepid}}</a></td>
             <td :class="row.status + '-background'">{{row.status}}</td>
