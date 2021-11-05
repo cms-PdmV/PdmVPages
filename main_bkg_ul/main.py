@@ -66,10 +66,15 @@ for ds_i, ds_name in enumerate(datasets):
             if not chain_ids:
                 rows.append(make_row(ds_name, request, None, None))
                 continue
-
             for chain_i, chain_id in enumerate(chain_ids):
                 print('    %s/%s chained request %s' % (chain_i + 1, len(chain_ids), chain_id))
-                # when you know the exactly thing you wann fetch, instead of query
+                # condition to avoid JME Nano chains
+                if 'NanoAODJME' in chain_id or 'NanoAODAPVJME' in chain_id: 
+                    continue
+                # condition to take chains up to nano
+                if 'NanoAOD' not in chain_id:
+                    continue
+                # when you know the exactly thing you wanna fetch, instead of query
                 chained_request = mcm_get('chained_requests', chain_id) 
                 mini = None
                 nano = None
