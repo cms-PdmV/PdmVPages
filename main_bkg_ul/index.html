@@ -25,9 +25,6 @@
         height: 30px;
         background: white;
       }
-      tr:hover {
-        background: #eee !important;
-      }
       table {
         margin-left: auto;
         margin-right: auto;
@@ -155,12 +152,12 @@
         <tbody>
           <tr v-for="(row, $index) in rows">
             <td>{{$index + 1}}.</td>
-            <td>{{row.dataset}}</td>
-            <td><a target="_blank" :href="makeMcMLink(row.root_prepid)">{{row.root_prepid}}</a></td>
-            <td :class="row.status + '-background'">{{row.status}}</td>
-            <td><a target="_blank" :href="makeMcMLink(row.mini)">{{row.mini}}</a></td>
-            <td :class="row.mini_status + '-background'">{{row.mini_status}}</td>
-            <td>{{row.mini_completed_events.toLocaleString('en-US')}}</td>
+            <td v-if="row.rowspan.dataset" :rowspan="row.rowspan.dataset">{{row.dataset}}</td>
+            <td v-if="row.rowspan.root_prepid" :rowspan="row.rowspan.root_prepid"><a target="_blank" :href="makeMcMLink(row.root_prepid)">{{row.root_prepid}}</a></td>
+            <td v-if="row.rowspan.root_prepid" :rowspan="row.rowspan.root_prepid" :class="row.status + '-background'">{{row.status}}</td>
+            <td v-if="row.rowspan.mini" :rowspan="row.rowspan.mini"><a target="_blank" :href="makeMcMLink(row.mini)">{{row.mini}}</a></td>
+            <td v-if="row.rowspan.mini" :rowspan="row.rowspan.mini" :class="row.mini_status + '-background'">{{row.mini_status}}</td>
+            <td v-if="row.rowspan.mini" :rowspan="row.rowspan.mini">{{row.mini_completed_events.toLocaleString('en-US')}}</td>
             <td><a target="_blank" :href="makeMcMLink(row.nano)">{{row.nano}}</a></td>
             <td :class="row.nano_status + '-background'">{{row.nano_status}}</td>
             <td>{{row.nano_completed_events.toLocaleString('en-US')}}</td>
@@ -198,7 +195,6 @@
           $.get("data.json", function( data ) {
             component.data = data;
             component.applyFilters();
-            component.rows = component.rows.sort(component.sortComparator);
           });
           $.get("update_timestamp.txt", function( data ) {
             component.lastUpdate = data;
@@ -233,7 +229,7 @@
                 this.sortOrder = 1;
             }
             let sortedRows = this.rows.sort(this.sortComparator);
-            // this.mergeCells(sortedRows);
+            this.mergeCells(sortedRows, ['dataset', 'root_prepid', 'mini']);
             this.rows = sortedRows;
             let urlParams = Object.fromEntries(new URLSearchParams(window.location.search));
             if (this.sortOrder != 1) {
@@ -279,7 +275,8 @@
                 delete urlParams[attribute]
               }
             }
-            // this.mergeCells(filteredRows);
+            filteredRows = filteredRows.sort(this.sortComparator);
+            this.mergeCells(filteredRows, ['dataset', 'root_prepid', 'mini']);
             this.rows = filteredRows;
             this.replaceQuery(urlParams);
           },
@@ -292,21 +289,22 @@
             let newUrl = window.location.protocol + "//" + window.location.host + window.location.pathname + urlQuery;
             window.history.replaceState({path: newUrl}, '', newUrl);
           },
-          mergeCells: function(list) {
-            list.forEach(row => {
-              for (let item of row) {
-                item.rowspan = 1;
+          mergeCells: function(list, attributes) {
+            list.forEach(element => {
+              element.rowspan = {};
+              for (let attribute of attributes) {
+                element.rowspan[attribute] = 1;
               }
             });
             for (let i = list.length - 1; i > 0; i--) {
               let thisEntry = list[i];
               let otherEntry = list[i - 1];
-              for (let j = 0; j < Math.min(thisEntry.length, otherEntry.length); j++) {
-                if (thisEntry[j]['dataset'] !== otherEntry[j]['dataset']) {
+              for (let attribute of attributes) {
+                if (thisEntry[attribute] !== otherEntry[attribute]) {
                   break
                 }
-                otherEntry[j].rowspan += thisEntry[j].rowspan;
-                thisEntry[j].rowspan = 0;
+                otherEntry.rowspan[attribute] += thisEntry.rowspan[attribute];
+                thisEntry.rowspan[attribute] = 0;
               }
             }
           },
