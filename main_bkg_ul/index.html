@@ -106,28 +106,28 @@
         <tr>
           <th></th>
           <th :class="sortOn == 'dataset' ? 'sorted-by' : ''">
-            <span class="sort" @click="changeSortToColumn('dataset')">
+            <span class="sort" @click="onSort('dataset')">
               Dataset
             </span>
             <br>
-            <input type="text" class="header-search" placeholder="Type to search..." v-model="search.dataset" @input="applyFilters()">
+            <input type="text" class="header-search" placeholder="Type to search..." v-model="search.dataset" @input="onSearch()">
           </th>
           <th :class="sortOn == 'root_prepid' ? 'sorted-by' : ''">
-            <span class="sort" @click="changeSortToColumn('root_prepid')">
+            <span class="sort" @click="onSort('root_prepid')">
                 Root PrepID
             </span>
             <br>
-            <input type="text" class="header-search" placeholder="Type to search..." v-model="search.root_prepid" @input="applyFilters()">
+            <input type="text" class="header-search" placeholder="Type to search..." v-model="search.root_prepid" @input="onSearch()">
           </th>
           <th>
             Root Status
           </th>
           <th :class="sortOn == 'mini' ? 'sorted-by' : ''">
-            <span class="sort" @click="changeSortToColumn('mini')">
+            <span class="sort" @click="onSort('mini')">
                 Mini PrepID
             </span>
             <br>
-            <input type="text" class="header-search" placeholder="Type to search..." v-model="search.mini" @input="applyFilters()">
+            <input type="text" class="header-search" placeholder="Type to search..." v-model="search.mini" @input="onSearch()">
           </th>
           <th>
             Mini Status
@@ -136,11 +136,11 @@
             Mini Completed Events
           </th>
           <th :class="sortOn == 'nano' ? 'sorted-by' : ''">
-            <span class="sort" @click="changeSortToColumn('nano')">
+            <span class="sort" @click="onSort('nano')">
                 Nano PrepID
             </span>
             <br>
-            <input type="text" class="header-search" placeholder="Type to search..." v-model="search.nano" @input="applyFilters()">
+            <input type="text" class="header-search" placeholder="Type to search..." v-model="search.nano" @input="onSearch()">
           </th>
           <th>
             Nano Status
@@ -186,7 +186,7 @@
         created (){
           let urlParams = Object.fromEntries(new URLSearchParams(window.location.search));
           for (let key in this.search) {
-            this.search[key] = urlParams[key];
+            this.search[key] = urlParams[key] ? urlParams[key] : '';
           }
           this.sortOn = urlParams.sort_on || this.defaultSortOn;
           this.sortOrder = parseInt(urlParams.sort_order || 1);
@@ -194,72 +194,33 @@
           const component = this;
           $.get("data.json", function( data ) {
             component.data = data;
-            component.applyFilters();
+            component.onSearch();
           });
           $.get("update_timestamp.txt", function( data ) {
             component.lastUpdate = data;
           });
         },
         methods: {
-          sortComparator: function(a, b) {
-            if (a[this.sortOn] === null && b[this.sortOn] === null) {
-              return 0;
-            }
-            // nulls go at the end
-            if (a[this.sortOn] === null) {
-              return 1; //this.sortOrder;
-            }
-            if (b[this.sortOn] === null) {
-              return -1; //-this.sortOrder;
-            }
-            // Compare normal values
-            if (a[this.sortOn] < b[this.sortOn]) {
-              return -this.sortOrder;
-            }
-            if (a[this.sortOn] > b[this.sortOn]) {
-              return this.sortOrder;
-            }
-            return a[this.defaultSortOn] > b[this.defaultSortOn] ? this.sortOrder : -this.sortOrder;
+          onSearch: function() {
+            this.rows = this.applySort(this.applyFilters(this.data));
+            this.updateQuery();
           },
-          changeSortToColumn: function(column) {
-            if (column == this.sortOn) {
-                this.sortOrder *= -1;
-            } else {
-                this.sortOn = column;
-                this.sortOrder = 1;
-            }
-            let sortedRows = this.rows.sort(this.sortComparator);
-            this.mergeCells(sortedRows, ['dataset', 'root_prepid', 'mini']);
-            this.rows = sortedRows;
-            let urlParams = Object.fromEntries(new URLSearchParams(window.location.search));
-            if (this.sortOrder != 1) {
-              urlParams['sort_order'] = this.sortOrder;
-            } else {
-              delete urlParams['sort_order'];
-            }
-            if (this.sortOn != this.defaultSortOn) {
-              urlParams['sort_on'] = this.sortOn;
-            } else {
-              delete urlParams['sort_on'];
-            }
-            this.replaceQuery(urlParams);
+          onSort: function(attribute) {
+            this.sortOrder = (attribute == this.sortOn) ? this.sortOrder * -1 : 1;
+            this.sortOn = attribute;
+            this.rows = this.applySort(this.rows);
+            this.updateQuery();
           },
-          applyFilters: function() {
-            let filteredRows = this.data;
-            let urlParams = Object.fromEntries(new URLSearchParams(window.location.search));
+          applyFilters: function(rows) {
             for (let attribute in this.search) {
-              if (this.search[attribute]) {
+              let pattern = this.search[attribute].trim();
+              if (pattern.length && pattern != '-' && pattern != '!') {
                 let negate = false;
-                let pattern = this.search[attribute];
-                if (pattern == '-' || pattern == '!') {
-                  continue
-                }
                 if (pattern[0] == '-' || pattern[0] == '!') {
                   negate = true;
                   pattern = pattern.substring(1);
-                  this.search[attribute] = '!' + pattern;
                 }
-                pattern = pattern.replace(/\.\*/g, '*').replace(/ /g, '*').replace(/\*/g, '.*');
+                pattern = pattern.replaceAll('.*', '*').replaceAll(' ', '*').replaceAll('*', '.*');
                 const regex = RegExp(pattern, 'i'); // 'i' for case insensitivity
                 const filterFunc = function(entry) {
                   const value = entry[attribute];
@@ -269,25 +230,62 @@
                   }
                   return regex.test(value) ^ negate;
                 }
-                filteredRows = filteredRows.filter(filterFunc);
-                urlParams[attribute] = this.search[attribute];
-              } else {
-                delete urlParams[attribute]
+                rows = rows.filter(filterFunc);
               }
             }
-            filteredRows = filteredRows.sort(this.sortComparator);
-            this.mergeCells(filteredRows, ['dataset', 'root_prepid', 'mini']);
-            this.rows = filteredRows;
-            this.replaceQuery(urlParams);
+            return rows;
           },
-          replaceQuery: function(urlParams) {
+          applySort: function(rows) {
+            rows = this.multicolumnSort(rows, this.sortOn, this.sortOrder, ['dataset', 'root_prepid', 'mini', 'nano'])
+            this.mergeCells(rows, ['dataset', 'root_prepid', 'mini']);
+            return rows;
+          },
+          updateQuery: function() {
+            let urlParams = Object.fromEntries(new URLSearchParams(window.location.search));
+            urlParams['sort_order'] = this.sortOrder != 1 ? this.sortOrder : undefined;
+            urlParams['sort_on'] = this.sortOn != this.defaultSortOn ? this.sortOn : undefined;
+            for (let attribute in this.search) {
+              let pattern = this.search[attribute];
+              if (pattern == '-' || pattern == '!') {
+                pattern = undefined;
+              }
+              urlParams[attribute] = pattern ? pattern.trim() : undefined;
+            }
+            // Delete all undefined
+            Object.keys(urlParams).forEach(key => urlParams[key] === undefined && delete urlParams[key]);
             let urlQuery = new URLSearchParams(urlParams).toString();
             if (urlQuery) {
               urlQuery = '?' + urlQuery;
               urlQuery = decodeURI(urlQuery);
             }
-            let newUrl = window.location.protocol + "//" + window.location.host + window.location.pathname + urlQuery;
+            let newUrl = window.location.protocol + '//' + window.location.host + window.location.pathname + urlQuery;
             window.history.replaceState({path: newUrl}, '', newUrl);
+          },
+          multicolumnSort: function(rows, sortOn, sortOrder, attributes) {
+            const comparator = function(a, b, attr, order) {
+              if (a[attr] == b[attr]) {
+                return 0;
+              }
+              if (a[attr] === null) { return 1; }
+              if (b[attr] === null) { return -1; }
+
+              // Compare normal values
+              if (a[attr] < b[attr]) { return -sortOrder; }
+              if (a[attr] > b[attr]) { return sortOrder; }
+
+              return 0;
+            }
+
+            attributes = attributes.filter(x => x != sortOn)
+            attributes.unshift(sortOn);
+            rows = rows.sort(function(a, b) {
+              for (let attr of attributes) {
+                let sortResult = comparator(a, b, attr, sortOrder);
+                if (sortResult != 0) { return sortResult;}
+              }
+              return 0;
+            })
+            return rows;
           },
           mergeCells: function(list, attributes) {
             list.forEach(element => {
