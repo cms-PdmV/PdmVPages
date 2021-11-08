@@ -61,6 +61,8 @@ for ds_i, ds_name in enumerate(datasets):
                                                     len(requests)))
     if requests:
         for req_i, request in enumerate(requests):
+            if 'PPD' in request['prepid']:
+                continue
             print('  %s/%s request %s' % (req_i + 1, len(requests), request['prepid']))
             chain_ids = request['member_of_chain']
             if not chain_ids:
