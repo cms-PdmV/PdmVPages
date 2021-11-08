@@ -102,6 +102,8 @@
       <div style="text-align: center; margin: 8px;">
         Updated: {{lastUpdate}}
       </div>
+      <!-- Put sum here as well -->
+
       <table>
         <tr>
           <th></th>
@@ -150,6 +152,17 @@
           </th>
         </tr>
         <tbody>
+          <tr>
+            <td colspan="4">
+              <b>SUM</b>
+            </td>
+            <td colspan="3">
+              <b>{{sumMini.toLocaleString('en-US')}}</b>
+            </td>
+            <td colspan="3">
+              <b>{{sumNano.toLocaleString('en-US')}}</b>
+            </td>
+          </tr>
           <tr v-for="(row, $index) in rows">
             <td>{{$index + 1}}.</td>
             <td v-if="row.rowspan.dataset" :rowspan="row.rowspan.dataset">{{row.dataset}}</td>
@@ -161,6 +174,17 @@
             <td><a target="_blank" :href="makeMcMLink(row.nano)">{{row.nano}}</a></td>
             <td :class="row.nano_status + '-background'">{{row.nano_status}}</td>
             <td>{{row.nano_completed_events.toLocaleString('en-US')}}</td>
+          </tr>
+          <tr>
+            <td colspan="4">
+              <b>SUM</b> 
+            </td>
+            <td colspan="3">
+              <b>{{sumMini.toLocaleString('en-US')}}</b>
+            </td>
+            <td colspan="3">
+              <b>{{sumNano.toLocaleString('en-US')}}</b>
+            </td>
           </tr>
         </tbody>
       </table>
@@ -175,6 +199,8 @@
           defaultSortOn: 'dataset',
           sortOn: undefined,
           sortOrder: 1,
+          sumMini: 0,
+          sumNano: 0,
           search: {
             dataset: undefined,
             root_prepid: undefined,
@@ -203,6 +229,7 @@
         methods: {
           onSearch: function() {
             this.rows = this.applySort(this.applyFilters(this.data));
+            this.calculateSums();
             this.updateQuery();
           },
           onSort: function(attribute) {
@@ -210,6 +237,23 @@
             this.sortOn = attribute;
             this.rows = this.applySort(this.rows);
             this.updateQuery();
+          },
+          calculateSums: function() {
+            let seenMinis = new Set();
+            let seenNanos = new Set();
+            this.sumMini = 0;
+            this.sumNano = 0;
+            for (let row of this.rows) {
+              if (!seenMinis.has(row.mini)) {
+                seenMinis.add(row.mini)
+                this.sumMini += Math.max(row.mini_completed_events, 0);
+              }
+              if (!seenNanos.has(row.nano)) {
+                seenNanos.add(row.nano)
+                this.sumNano += Math.max(row.nano_completed_events, 0);
+              }
+            }
+
           },
           applyFilters: function(rows) {
             for (let attribute in this.search) {
