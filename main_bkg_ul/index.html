@@ -185,7 +185,7 @@
           <tr v-for="(row, $index) in rows">
             <td>{{$index + 1}}.</td>
             <td v-if="row.rowspan.dataset" :rowspan="row.rowspan.dataset">{{row.dataset}}</td>
-            <td v-if="row.rowspan.root_prepid" :rowspan="row.rowspan.root_prepid"><a target="_blank" :href="makeMcMLink(row.root_prepid)">{{row.root_prepid}}</a>{{row.root_duplicate}}</td>
+            <td v-if="row.rowspan.root_prepid" :rowspan="row.rowspan.root_prepid"><a target="_blank" :href="makeMcMLink(row.root_prepid)">{{row.root_prepid}}</a></td>
             <td v-if="row.rowspan.root_prepid" :rowspan="row.rowspan.root_prepid" :class="row.status + '-background'">{{row.status}}</td>
             <td v-if="row.rowspan.mini" :rowspan="row.rowspan.mini"><a target="_blank" :href="makeMcMLink(row.mini)">{{row.mini}}</a></td>
             <td v-if="row.rowspan.mini" :rowspan="row.rowspan.mini" :class="row.mini_status + '-background'">{{row.mini_status}}</td>
