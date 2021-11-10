@@ -166,6 +166,9 @@
           <th>
             Nano Completed Events
           </th>
+          <th>
+            Notes
+          </th>
         </tr>
         <tbody>
           <tr>
@@ -182,7 +185,7 @@
           <tr v-for="(row, $index) in rows">
             <td>{{$index + 1}}.</td>
             <td v-if="row.rowspan.dataset" :rowspan="row.rowspan.dataset">{{row.dataset}}</td>
-            <td v-if="row.rowspan.root_prepid" :rowspan="row.rowspan.root_prepid"><a target="_blank" :href="makeMcMLink(row.root_prepid)">{{row.root_prepid}}</a></td>
+            <td v-if="row.rowspan.root_prepid" :rowspan="row.rowspan.root_prepid"><a target="_blank" :href="makeMcMLink(row.root_prepid)">{{row.root_prepid}}</a>{{row.root_duplicate}}</td>
             <td v-if="row.rowspan.root_prepid" :rowspan="row.rowspan.root_prepid" :class="row.status + '-background'">{{row.status}}</td>
             <td v-if="row.rowspan.mini" :rowspan="row.rowspan.mini"><a target="_blank" :href="makeMcMLink(row.mini)">{{row.mini}}</a></td>
             <td v-if="row.rowspan.mini" :rowspan="row.rowspan.mini" :class="row.mini_status + '-background'">{{row.mini_status}}</td>
@@ -190,6 +193,7 @@
             <td><a target="_blank" :href="makeMcMLink(row.nano)">{{row.nano}}</a></td>
             <td :class="row.nano_status + '-background'">{{row.nano_status}}</td>
             <td>{{row.nano_completed_events.toLocaleString('en-US')}}</td>
+            <td><template v-if="row.root_duplicate"><b>root is duplicated</b></template></td>
           </tr>
           <tr>
             <td colspan="4">
