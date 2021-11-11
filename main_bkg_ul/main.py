@@ -23,14 +23,16 @@ def mcm_get(database, prepid):
     return result
 
 
-def make_row(ds, root, mini, nano, root_duplicate):
+def make_row(ds, root, mini, nano):
     """
     Make a single output row with given dataset, root, mini and nano requests
     """
     return {'root_prepid': root['prepid'] if root else '',
-            'dataset': root['dataset_name'] if root else ds,
+            'dataset': root['dataset_name'] if root else ds['name'],
+            'campaign_count': ds['campaign_count'],
+            'pwg_count': ds['pwg_count'],
             'status': root['status'] if root else 'not_exist',
-            'root_duplicate': root_duplicate,
+            'root_duplicate_of': root['duplicate_of'] if root else '',
             'root_extension': root['extension'] if root else 0,
             'mini': mini['prepid'] if mini else '',
             'mini_status': mini['status'] if mini else '',
@@ -53,34 +55,42 @@ if '--debug' in sys.argv:
     datasets = datasets[:30]
     print('Picking random %s datasets because debug' % (len(datasets)))
 
-
 rows = []
 for ds_i, ds_name in enumerate(datasets):
     requests = mcm.get('requests', query='prepid=*20UL*GEN*&dataset_name=%s' % (ds_name))
+    # filtering out PPD requests
+    requests = [r for r in requests if r['pwg'] != 'PPD']
     print('%s/%s dataset %s fetched %s requests' % (ds_i + 1,
                                                     len(datasets),
                                                     ds_name,
                                                     len(requests)))
     if requests:
         duplicates = {}
+        # take a set of campaigns for a specif dataset
+        # evaluate the length of the set
+        # check if it is 4 (20UL should have 4 root campaigns)
+        campaign_count = len(set((r['pwg']+r['member_of_campaign']) for r in requests))
+        # the same as above but checking if is the same pwg across the root requests
+        pwg_count = len(set(r['pwg'] for r in requests))
         for req_i, request in enumerate(requests):
             #print(json.dumps(request, indent=2, sort_keys=True))
-            if 'PPD' in request['prepid']:
-                continue
             print('  %s/%s request %s' % (req_i + 1, len(requests), request['prepid']))
             pwg = request['pwg']
             campaign = request['member_of_campaign']
             extension = request['extension']
-            # checks if there is a duplicate and returns a boolean
-            # at first iteration it would be always return False
-            duplicate = extension in duplicates.get(pwg,{}).get(campaign,set())
+            # checks if there is a duplicate and returns a prepid
+            # at first iteration it would be always return '' (if no '', would return None) because of the get method
+            duplicate_of = duplicates.get(pwg,{}).get(campaign,{}).get(extension, '')
+            # appending information to the dictionary of the root reuqest
+            request['duplicate_of'] = duplicate_of
             # populating the dictionary with pwg if it is not there
             # then populate the pwg with a campaign dictionary
-            # then add the extention to the set() of the campaign
-            duplicates.setdefault(pwg, {}).setdefault(campaign, set()).add(extension)
+            # then add the extention and prepid to the dictionary of the campaign
+            if not duplicate_of:
+                duplicates.setdefault(pwg, {}).setdefault(campaign, {})[extension] = request['prepid']
             chain_ids = request['member_of_chain']
             if not chain_ids:
-                rows.append(make_row(ds_name, request, None, None, duplicate))
+                rows.append(make_row({'name': ds_name, 'campaign_count': campaign_count, 'pwg_count': pwg_count}, request, None, None))
                 continue
             for chain_i, chain_id in enumerate(chain_ids):
                 print('    %s/%s chained request %s' % (chain_i + 1, len(chain_ids), chain_id))
@@ -100,10 +110,10 @@ for ds_i, ds_name in enumerate(datasets):
                     elif 'NanoAOD' in req_family:
                         nano = mcm_get('requests', req_family)
 
-                rows.append(make_row(ds_name, request, mini, nano, duplicate))
+                rows.append(make_row({'name': ds_name, 'campaign_count': campaign_count, 'pwg_count': pwg_count}, request, mini, nano))
     else:
         # Fake requests to create rows in the table:
-        rows.append(make_row(ds_name, None, None, None, False))
+        rows.append(make_row({'name': ds_name, 'campaign_count': 0, 'pwg_count': 0}, None, None, None))
 
 
 with open('data.json', 'w') as output_file:
