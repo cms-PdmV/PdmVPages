@@ -197,7 +197,10 @@
               <small v-if="row.root_extension" style="color:green"><br>Extension {{row.root_extension}}</small>
             </td>
             <td v-if="row.rowspan.root_prepid" :rowspan="row.rowspan.root_prepid" :class="row.status + '-background'">{{row.status}}</td>
-            <td v-if="row.rowspan.mini" :rowspan="row.rowspan.mini"><a target="_blank" :href="makeMcMLink(row.mini)">{{row.mini}}</a></td>
+            <td v-if="row.rowspan.mini" :rowspan="row.rowspan.mini">
+              <a target="_blank" :href="makeMcMLink(row.mini)">{{row.mini}}</a>
+              <small v-if="row.mini_completed_events < row.nano_completed_events" style="color:orange"><br>Deficit of {{(row.nano_completed_events - row.mini_completed_events).toLocaleString('en-US')}} events</small>
+            </td>
             <td v-if="row.rowspan.mini" :rowspan="row.rowspan.mini" :class="row.mini_status + '-background'">{{row.mini_status}}</td>
             <td v-if="row.rowspan.mini" :rowspan="row.rowspan.mini">{{row.mini_completed_events.toLocaleString('en-US')}}</td>
             <td><a target="_blank" :href="makeMcMLink(row.nano)">{{row.nano}}</a></td>
