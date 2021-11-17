@@ -196,12 +196,21 @@
               <small v-if="row.root_duplicate_of.length" style="color:red"><br>Duplicate of {{row.root_duplicate_of}}</small>
               <small v-if="row.root_extension" style="color:green"><br>Extension {{row.root_extension}}</small>
             </td>
-            <td v-if="row.rowspan.root_prepid" :rowspan="row.rowspan.root_prepid" :class="row.status + '-background'">{{row.status}}</td>
-            <td v-if="row.rowspan.mini" :rowspan="row.rowspan.mini"><a target="_blank" :href="makeMcMLink(row.mini)">{{row.mini}}</a></td>
-            <td v-if="row.rowspan.mini" :rowspan="row.rowspan.mini" :class="row.mini_status + '-background'">{{row.mini_status}}</td>
+            <td v-if="row.rowspan.root_prepid" :rowspan="row.rowspan.root_prepid" :class="row.status + '-background'">{{row.status}}
+              <small v-if="row.root_workflow"><br>Status: {{row.root_workflow.last_status}} | Priority: {{row.root_workflow.priority}} | {{row.root_workflow.type}}</small>
+            </td>
+            <td v-if="row.rowspan.mini" :rowspan="row.rowspan.mini">
+              <a target="_blank" :href="makeMcMLink(row.mini)">{{row.mini}}</a>
+              <small v-if="row.mini_completed_events < row.nano_completed_events" style="color:orange"><br>Deficit of {{(row.nano_completed_events - row.mini_completed_events).toLocaleString('en-US')}} events</small>
+            </td>
+            <td v-if="row.rowspan.mini" :rowspan="row.rowspan.mini" :class="row.mini_status + '-background'">{{row.mini_status}}
+              <small v-if="row.mini_workflow"><br>Status: {{row.mini_workflow.last_status}} | Priority: {{row.mini_workflow.priority}} | {{row.mini_workflow.type}}</small>
+            </td>
             <td v-if="row.rowspan.mini" :rowspan="row.rowspan.mini">{{row.mini_completed_events.toLocaleString('en-US')}}</td>
             <td><a target="_blank" :href="makeMcMLink(row.nano)">{{row.nano}}</a></td>
-            <td :class="row.nano_status + '-background'">{{row.nano_status}}</td>
+            <td :class="row.nano_status + '-background'">{{row.nano_status}}
+              <small v-if="row.nano_workflow"><br>Status: {{row.nano_workflow.last_status}} | Priority: {{row.nano_workflow.priority}} | {{row.nano_workflow.type}}</small>
+            </td>
             <td>{{row.nano_completed_events.toLocaleString('en-US')}}</td>
           </tr>
           <tr>
