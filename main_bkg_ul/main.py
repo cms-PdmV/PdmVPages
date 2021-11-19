@@ -1,10 +1,11 @@
 import sys
 import time
 import random
+import json
 sys.path.append('/afs/cern.ch/cms/PPD/PdmV/tools/McM/')
 from rest import McM
 from stats_rest import Stats2
-import json
+
 
 
 mcm = McM(dev=False)
@@ -26,6 +27,11 @@ def mcm_get(database, prepid):
 
 stats_cache = {}
 def stats_get(workflow):
+    """
+    Look for an object with given prepid
+    If it is in cache, return cached object
+    If not, fetch, save to cache and return it
+    """
     if workflow in stats_cache:
         return stats_cache[workflow]
 
@@ -33,14 +39,28 @@ def stats_get(workflow):
     stats_cache[workflow] = result
     return result
 
-def get_workflow(request):
+def add_workflow(request):
+    """
+    Look for the latest workflow
+    and returns from Stats2 the workflow dictionary
+    Otherwise, an empty dictionary
+    """
+    if not request:
+        return
+    if request['status'] != 'submitted':
+        return
     if request['reqmgr_name']:
         for r in reversed(request['reqmgr_name']):
             if r['content']:
                 workflow_name = r['name']
-                return stats_get(workflow_name)
-    return {}
-
+                workflow = stats_get(workflow_name)
+                #return workflow
+                if workflow:
+                    request['workflow'] = {'priority': workflow['RequestPriority'],
+                                           'last_status': workflow['RequestTransition'][-1]['Status'],
+                                           'last_status_time': workflow['RequestTransition'][-1]['UpdateTime'],
+                                           'type': workflow['RequestType']}
+                    return
 
 def make_row(ds, root, mini, nano):
     """
@@ -66,10 +86,8 @@ def make_row(ds, root, mini, nano):
             'nano_workflow': nano.get('workflow') if nano else None,
            }
 
-
 with open('datasets.txt') as ds_file:
     datasets = sorted(list(set([d.strip() for d in ds_file.read().split('\n') if d.strip()])))
-
 
 print('Read %s datasets from file' % (len(datasets)))
 if '--debug' in sys.argv:
@@ -97,14 +115,7 @@ for ds_i, ds_name in enumerate(datasets):
         for req_i, request in enumerate(requests):
             #print(json.dumps(request, indent=2, sort_keys=True))
             print('  %s/%s request %s' % (req_i + 1, len(requests), request['prepid']))
-            if request['status'] == 'submitted':
-                workflow = get_workflow(request)
-                if workflow:
-                    request['workflow'] = {'priority': workflow['RequestPriority'],
-                                           'last_status': workflow['RequestTransition'][-1]['Status'],
-                                           'last_status_time': workflow['RequestTransition'][-1]['UpdateTime'],
-                                           'type': workflow['RequestType']}
-
+            add_workflow(request)
             pwg = request['pwg']
             campaign = request['member_of_campaign']
             extension = request['extension']
@@ -137,23 +148,10 @@ for ds_i, ds_name in enumerate(datasets):
                 for req_family in chained_request['chain']:
                     if 'MiniAOD' in req_family:
                         mini = mcm_get('requests', req_family)
-                        if mini and mini['status'] == 'submitted':
-                            workflow = get_workflow(mini)
-                            if workflow:
-                                mini['workflow'] = {'priority': workflow['RequestPriority'],
-                                                    'last_status': workflow['RequestTransition'][-1]['Status'],
-                                                    'last_status_time': workflow['RequestTransition'][-1]['UpdateTime'],
-                                                    'type': workflow['RequestType']}
+                        add_workflow(mini)
                     elif 'NanoAOD' in req_family:
                         nano = mcm_get('requests', req_family)
-                        if nano and nano['status'] == 'submitted':
-                            workflow = get_workflow(nano)
-                            if workflow:
-                                nano['workflow'] = {'priority': workflow['RequestPriority'],
-                                                    'last_status': workflow['RequestTransition'][-1]['Status'],
-                                                    'last_status_time': workflow['RequestTransition'][-1]['UpdateTime'],
-                                                    'type': workflow['RequestType']}
-
+                        add_workflow(nano)
                 rows.append(make_row({'name': ds_name, 'campaign_count': campaign_count, 'pwg_count': pwg_count}, request, mini, nano))
     else:
         # Fake requests to create rows in the table:

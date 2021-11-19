@@ -107,7 +107,7 @@
   <body>
     <div id="app">
       <div class="logo">
-        <img src="logo_cropped.png" style="width: 200px;">
+        <a href="https://cms-pdmv.cern.ch/home/" target="_blank"> <img src="logo_cropped.png" style="width: 200px;"> </a>
       </div>
       <h3 style="text-align: center;">CMS Main Monte Carlo Background Samples - UL</h3>
       <small style="text-align: center; margin-top: -12px; display: block"><i>proudly made by Jordan Martins</i></small>
@@ -138,6 +138,7 @@
           </th>
           <th>
             Root Status
+            <br><small>Status | Priority | Type</small>
           </th>
           <th :class="sortOn == 'mini' ? 'sorted-by' : ''">
             <span class="sort" @click="onSort('mini')">
@@ -148,6 +149,7 @@
           </th>
           <th>
             Mini Status
+            <br><small>Status | Priority | Type</small>
           </th>
           <th :class="sortOn == 'mini_completed_events' ? 'sorted-by' : ''">
             <span class="sort" @click="onSort('mini_completed_events')">
@@ -163,6 +165,7 @@
           </th>
           <th>
             Nano Status
+            <br><small>Status | Priority | Type</small>
           </th>
           <th :class="sortOn == 'nano_completed_events' ? 'sorted-by' : ''">
             <span class="sort" @click="onSort('nano_completed_events')">
@@ -192,24 +195,35 @@
               <small v-if="row.pwg_count > 1" style="color:orange"><br>Mix of {{row.pwg_count}} PWG</small>
             </td>
             <td v-if="row.rowspan.root_prepid" :rowspan="row.rowspan.root_prepid">
-              <a target="_blank" :href="makeMcMLink(row.root_prepid)">{{row.root_prepid}}</a>
-              <small v-if="row.root_duplicate_of.length" style="color:red"><br>Duplicate of {{row.root_duplicate_of}}</small>
-              <small v-if="row.root_extension" style="color:green"><br>Extension {{row.root_extension}}</small>
+              <div v-if="row.root_prepid.length">
+                <a target="_blank" :href="row.root_mcm_link">{{row.root_prepid}}</a>
+                <a :href="row.root_stats_link" target="_blank" title="Open in Stats&#178;"> <img src="stats2.png" style="width: 16px;"> </a>
+                <small v-if="row.root_duplicate_of.length" style="color:red"><br>Duplicate of {{row.root_duplicate_of}}</small>
+                <small v-if="row.root_extension" style="color:green"><br>Extension {{row.root_extension}}</small>
+              </div>
             </td>
             <td v-if="row.rowspan.root_prepid" :rowspan="row.rowspan.root_prepid" :class="row.status + '-background'">{{row.status}}
-              <small v-if="row.root_workflow"><br>Status: {{row.root_workflow.last_status}} | Priority: {{row.root_workflow.priority}} | {{row.root_workflow.type}}</small>
+              <small v-if="row.root_workflow"><br>{{row.root_workflow.last_status}} since {{row.root_last_status_time_nice}} | {{row.root_workflow.priority}} | {{row.root_workflow.type}}</small>
             </td>
             <td v-if="row.rowspan.mini" :rowspan="row.rowspan.mini">
-              <a target="_blank" :href="makeMcMLink(row.mini)">{{row.mini}}</a>
-              <small v-if="row.mini_completed_events < row.nano_completed_events" style="color:orange"><br>Deficit of {{(row.nano_completed_events - row.mini_completed_events).toLocaleString('en-US')}} events</small>
+              <div v-if="row.mini.length">
+                <a target="_blank" :href="row.mini_mcm_link">{{row.mini}}</a>
+                <a :href="row.mini_stats_link" target="_blank" title="Open in Stats&#178;"> <img src="stats2.png" style="width: 16px;"> </a>
+                <small v-if="row.mini_completed_events < row.nano_completed_events" style="color:orange"><br>Deficit of {{(row.nano_completed_events - row.mini_completed_events).toLocaleString('en-US')}} events</small>
+              </div>
             </td>
             <td v-if="row.rowspan.mini" :rowspan="row.rowspan.mini" :class="row.mini_status + '-background'">{{row.mini_status}}
-              <small v-if="row.mini_workflow"><br>Status: {{row.mini_workflow.last_status}} | Priority: {{row.mini_workflow.priority}} | {{row.mini_workflow.type}}</small>
+              <small v-if="row.mini_workflow"><br>{{row.mini_workflow.last_status}} since {{row.mini_last_status_time_nice}} | {{row.mini_workflow.priority}} | {{row.mini_workflow.type}}</small>
             </td>
             <td v-if="row.rowspan.mini" :rowspan="row.rowspan.mini">{{row.mini_completed_events.toLocaleString('en-US')}}</td>
-            <td><a target="_blank" :href="makeMcMLink(row.nano)">{{row.nano}}</a></td>
+            <td>
+              <div v-if="row.nano.length">
+                <a target="_blank" :href="makeMcMLink(row.nano)">{{row.nano}}</a>
+                <a :href="row.nano_stats_link" target="_blank" title="Open in Stats&#178;"> <img src="stats2.png" style="width: 16px;"> </a>
+              </div>
+            </td>
             <td :class="row.nano_status + '-background'">{{row.nano_status}}
-              <small v-if="row.nano_workflow"><br>Status: {{row.nano_workflow.last_status}} | Priority: {{row.nano_workflow.priority}} | {{row.nano_workflow.type}}</small>
+              <small v-if="row.nano_workflow"><br>{{row.nano_workflow.last_status}} since {{row.nano_last_status_time_nice}} | {{row.nano_workflow.priority}} | {{row.nano_workflow.type}}</small>
             </td>
             <td>{{row.nano_completed_events.toLocaleString('en-US')}}</td>
           </tr>
@@ -257,6 +271,18 @@
 
           const component = this;
           $.get("data.json", function( data ) {
+            let now = parseInt(Date.now() / 1000)
+            for (let row of data) {
+              row['root_mcm_link'] = component.makeMcMLink(row.root_prepid)
+              row['root_stats_link'] = component.makeStats2Link(row.root_prepid)
+              row['mini_mcm_link'] = component.makeMcMLink(row.mini)
+              row['mini_stats_link'] = component.makeStats2Link(row.mini)
+              row['nano_mcm_link'] = component.makeMcMLink(row.nano)
+              row['nano_stats_link'] = component.makeStats2Link(row.nano)
+              row['root_last_status_time_nice'] = row.root_workflow ? component.secondsToDiff(now - row.root_workflow.last_status_time) : ""
+              row['mini_last_status_time_nice'] = row.mini_workflow ? component.secondsToDiff(now - row.mini_workflow.last_status_time) : ""
+              row['nano_last_status_time_nice'] = row.nano_workflow ? component.secondsToDiff(now - row.nano_workflow.last_status_time) : ""
+            }
             component.data = data;
             component.onSearch();
           });
@@ -291,7 +317,6 @@
                 this.sumNano += Math.max(row.nano_completed_events, 0);
               }
             }
-
           },
           applyFilters: function(rows) {
             for (let attribute in this.search) {
@@ -388,8 +413,30 @@
               }
             }
           },
+          secondsToDiff: function (s) {
+            var days = Math.floor(s / 86400)
+            var hours = Math.floor((s - (days * 86400)) / 3600)
+            var minutes = Math.round((s - (days * 86400 + hours * 3600)) / 60)
+            if (days == 0 && hours == 0 && minutes == 0) {
+                return parseInt(s) + 's'
+            }
+            var result = ''
+            if (days > 0) {
+                result += days + 'd '
+            }
+            if (hours > 0) {
+                result += hours + 'h '
+            }
+            if (minutes > 0) {
+                result += minutes + 'min'
+            }
+            return result
+          },
           makeMcMLink(prepid) {
             return 'https://cms-pdmv.cern.ch/mcm/requests?prepid=' + prepid;
+          },
+          makeStats2Link(prepid) {
+            return 'https://cms-pdmv.cern.ch/stats/?request=' + prepid;
           }
         }
       })
