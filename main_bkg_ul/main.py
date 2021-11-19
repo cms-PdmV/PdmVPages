@@ -56,7 +56,8 @@ def add_workflow(request):
                 workflow = stats_get(workflow_name)
                 #return workflow
                 if workflow:
-                    request['workflow'] = {'priority': workflow['RequestPriority'],
+                    request['workflow'] = {'name': workflow_name,
+                                           'priority': workflow['RequestPriority'],
                                            'last_status': workflow['RequestTransition'][-1]['Status'],
                                            'last_status_time': workflow['RequestTransition'][-1]['UpdateTime'],
                                            'type': workflow['RequestType']}
