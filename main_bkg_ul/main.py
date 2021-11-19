@@ -35,7 +35,11 @@ def stats_get(workflow):
     if workflow in stats_cache:
         return stats_cache[workflow]
 
-    result = stats.get_workflow(workflow)
+    try:
+        result = stats.get_workflow(workflow)
+    except:
+        result = {}
+
     stats_cache[workflow] = result
     return result
 
