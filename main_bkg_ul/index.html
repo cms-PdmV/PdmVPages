@@ -285,9 +285,9 @@
               row['mini_stats_link'] = component.makeStats2Link(row.mini)
               row['nano_mcm_link'] = component.makeMcMLink(row.nano)
               row['nano_stats_link'] = component.makeStats2Link(row.nano)
-              row['root_transferor_link'] = row.root_workflow ? component.makeStats2Link(row.root_workflow.name) : ""
-              row['mini_transferor_link'] = row.mini_workflow ? component.makeStats2Link(row.mini_workflow.name) : ""
-              row['nano_transferor_link'] = row.nano_workflow ? component.makeStats2Link(row.nano_workflow.name) : ""
+              row['root_transferor_link'] = row.root_workflow ? component.makeTransferorLink(row.root_workflow.name) : ""
+              row['mini_transferor_link'] = row.mini_workflow ? component.makeTransferorLink(row.mini_workflow.name) : ""
+              row['nano_transferor_link'] = row.nano_workflow ? component.makeTransferorLink(row.nano_workflow.name) : ""
               row['root_last_status_time_nice'] = row.root_workflow ? component.secondsToDiff(now - row.root_workflow.last_status_time) : ""
               row['mini_last_status_time_nice'] = row.mini_workflow ? component.secondsToDiff(now - row.mini_workflow.last_status_time) : ""
               row['nano_last_status_time_nice'] = row.nano_workflow ? component.secondsToDiff(now - row.nano_workflow.last_status_time) : ""
