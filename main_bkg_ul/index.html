@@ -203,7 +203,9 @@
               </div>
             </td>
             <td v-if="row.rowspan.root_prepid" :rowspan="row.rowspan.root_prepid" :class="row.status + '-background'">{{row.status}}
-              <small v-if="row.root_workflow"><br>{{row.root_workflow.last_status}} since {{row.root_last_status_time_nice}} | {{row.root_workflow.priority}} | {{row.root_workflow.type}}</small>
+              <small v-if="row.root_workflow"><br>
+                <a v-if="row.root_workflow.last_status == 'staging'" :href="row.root_transferor_link" target="_blank">{{row.root_workflow.last_status}}</a>
+                <span v-if="row.root_workflow.last_status != 'staging'">{{row.root_workflow.last_status}}</span> since {{row.root_last_status_time_nice}} | {{row.root_workflow.priority}} | {{row.root_workflow.type}}</small>
             </td>
             <td v-if="row.rowspan.mini" :rowspan="row.rowspan.mini">
               <div v-if="row.mini.length">
@@ -213,7 +215,9 @@
               </div>
             </td>
             <td v-if="row.rowspan.mini" :rowspan="row.rowspan.mini" :class="row.mini_status + '-background'">{{row.mini_status}}
-              <small v-if="row.mini_workflow"><br>{{row.mini_workflow.last_status}} since {{row.mini_last_status_time_nice}} | {{row.mini_workflow.priority}} | {{row.mini_workflow.type}}</small>
+              <small v-if="row.mini_workflow"><br>
+                <a v-if="row.mini_workflow.last_status == 'staging'" :href="row.mini_transferor_link" target="_blank">{{row.mini_workflow.last_status}}</a>
+                <span v-if="row.mini_workflow.last_status != 'staging'">{{row.mini_workflow.last_status}}</span> since {{row.mini_last_status_time_nice}} | {{row.mini_workflow.priority}} | {{row.mini_workflow.type}}</small>
             </td>
             <td v-if="row.rowspan.mini" :rowspan="row.rowspan.mini">{{row.mini_completed_events.toLocaleString('en-US')}}</td>
             <td>
@@ -223,7 +227,9 @@
               </div>
             </td>
             <td :class="row.nano_status + '-background'">{{row.nano_status}}
-              <small v-if="row.nano_workflow"><br>{{row.nano_workflow.last_status}} since {{row.nano_last_status_time_nice}} | {{row.nano_workflow.priority}} | {{row.nano_workflow.type}}</small>
+              <small v-if="row.nano_workflow"><br>
+                <a v-if="row.nano_workflow.last_status == 'staging'" :href="row.nano_transferor_link" target="_blank">{{row.nano_workflow.last_status}}</a>
+                <span v-if="row.nano_workflow.last_status != 'staging'">{{row.nano_workflow.last_status}}</span> since {{row.nano_last_status_time_nice}} | {{row.nano_workflow.priority}} | {{row.nano_workflow.type}}</small>
             </td>
             <td>{{row.nano_completed_events.toLocaleString('en-US')}}</td>
           </tr>
@@ -279,6 +285,9 @@
               row['mini_stats_link'] = component.makeStats2Link(row.mini)
               row['nano_mcm_link'] = component.makeMcMLink(row.nano)
               row['nano_stats_link'] = component.makeStats2Link(row.nano)
+              row['root_transferor_link'] = row.root_workflow ? component.makeStats2Link(row.root_workflow.name) : ""
+              row['mini_transferor_link'] = row.mini_workflow ? component.makeStats2Link(row.mini_workflow.name) : ""
+              row['nano_transferor_link'] = row.nano_workflow ? component.makeStats2Link(row.nano_workflow.name) : ""
               row['root_last_status_time_nice'] = row.root_workflow ? component.secondsToDiff(now - row.root_workflow.last_status_time) : ""
               row['mini_last_status_time_nice'] = row.mini_workflow ? component.secondsToDiff(now - row.mini_workflow.last_status_time) : ""
               row['nano_last_status_time_nice'] = row.nano_workflow ? component.secondsToDiff(now - row.nano_workflow.last_status_time) : ""
@@ -437,6 +446,9 @@
           },
           makeStats2Link(prepid) {
             return 'https://cms-pdmv.cern.ch/stats/?request=' + prepid;
+          },
+          makeTransferorLink(workflow_name) {
+            return 'https://pdmv-pages.web.cern.ch/transferor_stuckor/?workflow=' + workflow_name;
           }
         }
       })
