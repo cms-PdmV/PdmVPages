@@ -136,9 +136,12 @@
             <br>
             <input type="text" class="header-search" placeholder="Type to search..." v-model="search.root_prepid" @input="onSearch()">
           </th>
-          <th>
-            Root Status
-            <br><small>Status | Priority | Type</small>
+          <th :class="sortOn == 'status' ? 'sorted-by' : ''">
+            <span class="sort" @click="onSort('status')">
+              Root Status
+              <br><small>Status | Priority | Type</small>
+            </span>
+            <br><input type="text" class="header-search" placeholder="Type to search..." v-model="search.status" @input="onSearch()">
           </th>
           <th :class="sortOn == 'mini' ? 'sorted-by' : ''">
             <span class="sort" @click="onSort('mini')">
@@ -262,6 +265,7 @@
           search: {
             dataset: undefined,
             root_prepid: undefined,
+            status: undefined,
             mini: undefined,
             nano: undefined,
           },
