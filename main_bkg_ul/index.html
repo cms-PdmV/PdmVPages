@@ -68,7 +68,6 @@
       .new-background {
         background-color: rgba(0, 0, 0, 0.1);
       }
-
       .not_exist-background {
         background-color: #e74c3c;
         color: white;
@@ -90,6 +89,15 @@
           color: #e74c3c;
           background-color: white;
         }
+      }
+      .high-fraction{
+        color: green;
+      }
+      .medium-fraction{
+        color: orange;
+      }
+      .low-fraction{
+        color: red;
       }
 
       .logo {
@@ -139,8 +147,8 @@
           <th :class="sortOn == 'status' ? 'sorted-by' : ''">
             <span class="sort" @click="onSort('status')">
               Root Status
-              <br><small>Status | Priority | Type</small>
             </span>
+            <br><small>Status | Priority | Type</small>
             <br><input type="text" class="header-search" placeholder="Type to search..." v-model="search.status" @input="onSearch()">
           </th>
           <th :class="sortOn == 'mini' ? 'sorted-by' : ''">
@@ -150,14 +158,17 @@
             <br>
             <input type="text" class="header-search" placeholder="Type to search..." v-model="search.mini" @input="onSearch()">
           </th>
-          <th>
-            Mini Status
+          <th :class="sortOn == 'mini_status' ? 'sorted-by' : ''">
+            <span class="sort" @click="onSort('mini_status')">
+              Mini Status
+            </span>
             <br><small>Status | Priority | Type</small>
           </th>
-          <th :class="sortOn == 'mini_completed_events' ? 'sorted-by' : ''">
+          <th :class="(sortOn == 'mini_completed_events' || sortOn == 'mini_fraction') ? 'sorted-by' : ''">
             <span class="sort" @click="onSort('mini_completed_events')">
               Mini Completed Events
             </span>
+            <br><small class="sort" @click="onSort('mini_fraction')">Fraction</small>
           </th>
           <th :class="sortOn == 'nano' ? 'sorted-by' : ''">
             <span class="sort" @click="onSort('nano')">
@@ -166,14 +177,17 @@
             <br>
             <input type="text" class="header-search" placeholder="Type to search..." v-model="search.nano" @input="onSearch()">
           </th>
-          <th>
-            Nano Status
+          <th :class="sortOn == 'nano_status' ? 'sorted-by' : ''">
+            <span class="sort" @click="onSort('nano_status')">
+              Nano Status
+            </span>
             <br><small>Status | Priority | Type</small>
           </th>
-          <th :class="sortOn == 'nano_completed_events' ? 'sorted-by' : ''">
+          <th :class="(sortOn == 'nano_completed_events' || sortOn == 'nano_fraction') ? 'sorted-by' : ''">
             <span class="sort" @click="onSort('nano_completed_events')">
               Nano Completed Events
             </span>
+            <br><small class="sort" @click="onSort('nano_fraction')">Fraction</small>
           </th>
         </tr>
         <tbody>
@@ -222,7 +236,9 @@
                 <a v-if="row.mini_workflow.last_status == 'staging'" :href="row.mini_transferor_link" target="_blank">{{row.mini_workflow.last_status}}</a>
                 <span v-if="row.mini_workflow.last_status != 'staging'">{{row.mini_workflow.last_status}}</span> since {{row.mini_last_status_time_nice}} | {{row.mini_workflow.priority}} | {{row.mini_workflow.type}}</small>
             </td>
-            <td v-if="row.rowspan.mini" :rowspan="row.rowspan.mini">{{row.mini_completed_events.toLocaleString('en-US')}}</td>
+            <td v-if="row.rowspan.mini" :rowspan="row.rowspan.mini">{{row.mini_completed_events.toLocaleString('en-US')}}
+              <br><small :class="row.mini_fraction >= 85 ? 'high-fraction' : row.mini_fraction >= 50 ? 'medium-fraction' : 'low-fraction'">{{row.mini_fraction.toFixed(2)}}%</small>
+            </td>
             <td>
               <div v-if="row.nano.length">
                 <a target="_blank" :href="makeMcMLink(row.nano)">{{row.nano}}</a>
@@ -234,7 +250,10 @@
                 <a v-if="row.nano_workflow.last_status == 'staging'" :href="row.nano_transferor_link" target="_blank">{{row.nano_workflow.last_status}}</a>
                 <span v-if="row.nano_workflow.last_status != 'staging'">{{row.nano_workflow.last_status}}</span> since {{row.nano_last_status_time_nice}} | {{row.nano_workflow.priority}} | {{row.nano_workflow.type}}</small>
             </td>
-            <td>{{row.nano_completed_events.toLocaleString('en-US')}}</td>
+            <td>
+              {{row.nano_completed_events.toLocaleString('en-US')}}
+              <br><small :class="row.nano_fraction >= 85 ? 'high-fraction' : row.nano_fraction >= 50 ? 'medium-fraction' : 'low-fraction'">{{row.nano_fraction.toFixed(2)}}%</small>
+            </td>
           </tr>
           <tr>
             <td colspan="4">
@@ -295,6 +314,8 @@
               row['root_last_status_time_nice'] = row.root_workflow ? component.secondsToDiff(now - row.root_workflow.last_status_time) : ""
               row['mini_last_status_time_nice'] = row.mini_workflow ? component.secondsToDiff(now - row.mini_workflow.last_status_time) : ""
               row['nano_last_status_time_nice'] = row.nano_workflow ? component.secondsToDiff(now - row.nano_workflow.last_status_time) : ""
+              row['mini_fraction'] = (row.mini_total_events && row.mini_completed_events >= 0) ? (row.mini_completed_events*100/row.mini_total_events) : 0
+              row['nano_fraction'] = (row.nano_total_events && row.nano_completed_events >= 0) ? (row.nano_completed_events*100/row.nano_total_events) : 0
             }
             component.data = data;
             component.onSearch();
@@ -382,16 +403,20 @@
             window.history.replaceState({path: newUrl}, '', newUrl);
           },
           multicolumnSort: function(rows, sortOn, sortOrder, attributes) {
+            const statusOrder = ["not_exist", "new", "validation", "defined", "approved", "submitted", "done"]
             const comparator = function(a, b, attr, order) {
               if (a[attr] == b[attr]) {
                 return 0;
               }
               if (a[attr] === null) { return 1; }
               if (b[attr] === null) { return -1; }
+              if (attr == "status" || attr == "mini_status" || attr == "nano_status") {
+                return (statusOrder.indexOf(b[attr]) - statusOrder.indexOf(a[attr])) * order ;
+              }
 
               // Compare normal values
-              if (a[attr] < b[attr]) { return -sortOrder; }
-              if (a[attr] > b[attr]) { return sortOrder; }
+              if (a[attr] < b[attr]) { return -order; }
+              if (a[attr] > b[attr]) { return order; }
 
               return 0;
             }
