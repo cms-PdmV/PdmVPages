@@ -408,10 +408,10 @@
               if (a[attr] == b[attr]) {
                 return 0;
               }
-              if (a[attr] === null) { return 1; }
-              if (b[attr] === null) { return -1; }
+              if (a[attr] === null) { return -1; }
+              if (b[attr] === null) { return 1; }
               if (attr == "status" || attr == "mini_status" || attr == "nano_status") {
-                return (statusOrder.indexOf(b[attr]) - statusOrder.indexOf(a[attr])) * order ;
+                return (statusOrder.indexOf(a[attr]) - statusOrder.indexOf(b[attr])) * order ;
               }
 
               // Compare normal values
