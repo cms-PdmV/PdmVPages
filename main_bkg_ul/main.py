@@ -140,14 +140,13 @@ for ds_i, ds_name in enumerate(datasets):
                 rows.append(make_row({'name': ds_name, 'campaign_count': campaign_count, 'pwg_count': pwg_count}, request, None, None))
                 continue
             # additional loop just to check whether there is a miniv2 request
-            for chain_i, chain_id in enumerate(chain_ids):
+            for chain_id in chain_ids:
                 # when you know the exactly thing you wanna fetch, instead of query
                 chained_request = mcm_get('chained_requests', chain_id)
-                for req_family in chained_request['chain']:
-                    if 'MiniAOD' in req_family:
-                        mini = mcm_get('requests', req_family)
-                        if 'v2' in mini['prepid']:
-                            request['miniv2_presence'] = True
+                mini_v2 = [p for p in chained_request['chain'] if 'MiniAOD' in p and 'v2' in p]
+                if mini_v2:
+                    request['miniv2_presence'] = True
+                    break
             for chain_i, chain_id in enumerate(chain_ids):
                 print('    %s/%s chained request %s' % (chain_i + 1, len(chain_ids), chain_id))
                 # condition to avoid JME Nano chains
