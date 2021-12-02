@@ -79,6 +79,7 @@ def make_row(ds, root, mini, nano):
             'root_duplicate_of': root['duplicate_of'] if root else '',
             'root_extension': root['extension'] if root else 0,
             'root_workflow': root.get('workflow') if root else None,
+            'root_miniv2_presence': root.get('miniv2_presence', False) if root else False,
             'mini': mini['prepid'] if mini else '',
             'mini_status': mini['status'] if mini else '',
             'mini_total_events': mini['total_events'] if mini else 0,
@@ -138,6 +139,15 @@ for ds_i, ds_name in enumerate(datasets):
             if not chain_ids:
                 rows.append(make_row({'name': ds_name, 'campaign_count': campaign_count, 'pwg_count': pwg_count}, request, None, None))
                 continue
+            # additional loop just to check whether there is a miniv2 request
+            for chain_i, chain_id in enumerate(chain_ids):
+                # when you know the exactly thing you wanna fetch, instead of query
+                chained_request = mcm_get('chained_requests', chain_id)
+                for req_family in chained_request['chain']:
+                    if 'MiniAOD' in req_family:
+                        mini = mcm_get('requests', req_family)
+                        if 'v2' in mini['prepid']:
+                            request['miniv2_presence'] = True
             for chain_i, chain_id in enumerate(chain_ids):
                 print('    %s/%s chained request %s' % (chain_i + 1, len(chain_ids), chain_id))
                 # condition to avoid JME Nano chains
@@ -147,6 +157,7 @@ for ds_i, ds_name in enumerate(datasets):
                 if 'NanoAOD' not in chain_id:
                     continue
                 # when you know the exactly thing you wanna fetch, instead of query
+                # this is cached since it is called before
                 chained_request = mcm_get('chained_requests', chain_id) 
                 mini = None
                 nano = None

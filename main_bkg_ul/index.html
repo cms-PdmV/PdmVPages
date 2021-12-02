@@ -206,7 +206,7 @@
             <td>{{$index + 1}}.</td>
             <td v-if="row.rowspan.dataset" :rowspan="row.rowspan.dataset">
               {{row.dataset}}
-              <small v-if="row.campaign_count == 0" style="color:red"><br>No requests</small>
+              <small v-if="row.campaign_count == 0" style="color:red"><br>No requests&#x1F480;</small>
               <small v-else-if="row.campaign_count < 4" style="color:red"><br>Missing {{4-row.campaign_count}} PWG&#x2715;Campaign(s)</small>
               <small v-else-if="row.campaign_count > 4" style="color:red"><br>Surplus {{row.campaign_count-4}} PWG&#x2715;Campaign(s)</small>
               <small v-if="row.pwg_count > 1" style="color:orange"><br>Mix of {{row.pwg_count}} PWG</small>
@@ -217,12 +217,14 @@
                 <a :href="row.root_stats_link" target="_blank" title="Open in Stats&#178;"> <img src="stats2.png" style="width: 16px;"> </a>
                 <small v-if="row.root_duplicate_of.length" style="color:red"><br>Duplicate of {{row.root_duplicate_of}}</small>
                 <small v-if="row.root_extension" style="color:green"><br>Extension {{row.root_extension}}</small>
+                <small v-if="(!row.root_miniv2_presence) && (row.status == 'done' || row.status == 'submitted')" style="color:red"><br>No Miniv2 request&#x1F480;</small>
               </div>
             </td>
             <td v-if="row.rowspan.root_prepid" :rowspan="row.rowspan.root_prepid" :class="row.status + '-background'">{{row.status}}
               <small v-if="row.root_workflow"><br>
                 <a v-if="row.root_workflow.last_status == 'staging'" :href="row.root_transferor_link" target="_blank">{{row.root_workflow.last_status}}</a>
-                <span v-if="row.root_workflow.last_status != 'staging'">{{row.root_workflow.last_status}}</span> since {{row.root_last_status_time_nice}} | {{row.root_workflow.priority}} | {{row.root_workflow.type}}</small>
+                <span v-if="row.root_workflow.last_status != 'staging'">{{row.root_workflow.last_status}}</span> since {{row.root_last_status_time_nice}} | {{row.root_workflow.priority}} | {{row.root_workflow.type}}
+              </small>
             </td>
             <td v-if="row.rowspan.mini" :rowspan="row.rowspan.mini">
               <div v-if="row.mini.length">
