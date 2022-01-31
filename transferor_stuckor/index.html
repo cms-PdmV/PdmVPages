@@ -81,12 +81,12 @@
             <br>
             <input type="text" class="header-search" placeholder="Type to search..." v-model="search.workflow" @input="applyFilters()">
           </th>
-          <th :class="sortOn == 'input_dataset' ? 'sorted-by' : ''">
-            <span class="sort" @click="changeSortToColumn('input_dataset')">
+          <th :class="sortOn == 'dataset' ? 'sorted-by' : ''">
+            <span class="sort" @click="changeSortToColumn('dataset')">
               Dataset
             </span>
             <br>
-            <input type="text" class="header-search" placeholder="Type to search..." v-model="search.input_dataset" @input="applyFilters()">
+            <input type="text" class="header-search" placeholder="Type to search..." v-model="search.dataset" @input="applyFilters()">
           </th>
           <th :class="sortOn == 'last_completion' ? 'sorted-by' : ''">
             <span class="sort" @click="changeSortToColumn('last_completion')">
@@ -124,7 +124,7 @@
             <td></td>
             <td><a target="_blank" :href="makeStatsLink(row.workflow)">{{row.workflow}}</a></td>
             <td style="max-width: 300px; white-space: normal; word-break: break-all;">
-              <a target="_blank" :href="makeDASSiteLink(row.input_dataset)">
+              <a target="_blank" :href="makeDASSiteLink(row.dataset)">
                 <small>{{row.dataset}}</small>
               </a>
               <small v-if="row.datatype != 'primary'">
