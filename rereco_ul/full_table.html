@@ -82,13 +82,14 @@
         </template>
         <br>
         Columns:
-        <template v-for="(_, column) in columns">
-          <input
-            type="checkbox"
-            :checked="columns[column]"
-            @input="columns[column] = $event.target.checked; applyFilters()"
-          /> {{column}}
-        </template>
+        <input type="checkbox" :checked="columns.raw_x_dcs_runs" @input="columns.raw_x_dcs_runs = $event.target.checked; applyFilters()"/> RAW x DCS runs
+        <input type="checkbox" :checked="columns.whitelist_x_raw_runs" @input="columns.whitelist_x_raw_runs = $event.target.checked; applyFilters()"/> Whitelist x RAW runs
+        <input type="checkbox" :checked="columns.whitelist_x_raw_x_dcs_runs" @input="columns.whitelist_x_raw_x_dcs_runs = $event.target.checked; applyFilters()"/> Whitelist x RAW x DCS runs
+        <input type="checkbox" :checked="columns.aod" @input="columns.aod = $event.target.checked; applyFilters()"/> AOD
+        <input type="checkbox" :checked="columns.miniaod" @input="columns.miniaod = $event.target.checked; applyFilters()"/> MiniAOD
+        <input type="checkbox" :checked="columns.nanoaod" @input="columns.nanoaod = $event.target.checked; applyFilters()"/> NanoAOD
+        <input type="checkbox" :checked="columns.fraction" @input="columns.fraction = $event.target.checked; applyFilters()"/> Fraction
+        <input type="checkbox" :checked="columns.diff_to_parent" @input="columns.diff_to_parent = $event.target.checked; applyFilters()"/> Diff to parent
         <br>
         Updated: {{lastUpdate}}
       </div>
@@ -103,21 +104,21 @@
             <input type="text" class="header-search" placeholder="Type to search..." v-model="search.dataset" @input="applyFilters()">
           </th>
           <th rowspan="2" v-if="columns.raw_x_dcs_runs">
-            RAW x DCS Runs
+            RAW x DCS runs
             <br>
-            <small>RAW x DCS Events</small>
+            <small>RAW x DCS events</small>
             <br>
             <i>Expected</i>
           </th>
-          <th rowspan="2" v-if="columns.whitelist_runs">
-            Whitelist Runs
+          <th rowspan="2" v-if="columns.whitelist_x_raw_runs">
+            Whitelist x RAW runs
             <br>
-            <small>Whitelist events</small>
+            <small>Whitelist x RAW events</small>
           </th>
-          <th rowspan="2" v-if="columns.whitelist_x_dcs_runs">
-            Whitelist x DCS Runs
+          <th rowspan="2" v-if="columns.whitelist_x_raw_x_dcs_runs">
+            Whitelist x RAW x DCS runs
             <br>
-            <small>Whitelist x DCS events</small>
+            <small>Whitelist x RAW x DCS events</small>
           </th>
           <th :colspan="columns.fraction && columns.diff_to_parent ? 3 : columns.fraction || columns.diff_to_parent ? 2 : 1" v-if="columns.aod">
             AOD
@@ -141,6 +142,8 @@
           </th>
           <th v-if="columns.aod && columns.fraction">
             <span class="sort" @click="changeSortToColumn('aod_fraction')">Fraction</span>
+            <br>
+            <small>Fraction - 1</small>
           </th>
           <th v-if="columns.aod && columns.diff_to_parent">Diff to RAW x DCS</th>
           <th v-if="columns.miniaod">
@@ -154,8 +157,10 @@
           </th>
           <th v-if="columns.miniaod && columns.fraction">
             <span class="sort" @click="changeSortToColumn('miniaod_fraction')">Fraction</span>
+            <br>
+            <small>Fraction - 1</small>
           </th>
-          <th v-if="columns.miniaod && columns.diff_to_parent">Diff to parent</th>
+          <th v-if="columns.miniaod && columns.diff_to_parent">Diff to AOD</th>
           <th v-if="columns.nanoaod">
             <small>PrepID</small>
             <br>
@@ -167,8 +172,10 @@
           </th>
           <th v-if="columns.nanoaod && columns.fraction">
             <span class="sort" @click="changeSortToColumn('nanoaod_fraction')">Fraction</span>
+            <br>
+            <small>Fraction - 1</small>
           </th>
-          <th v-if="columns.nanoaod && columns.diff_to_parent">Diff to parent</th>
+          <th v-if="columns.nanoaod && columns.diff_to_parent">Diff to MiniAOD</th>
         </tr>
         <tr v-for="row in rows">
           <template v-for="(item, index) in row">
@@ -183,31 +190,32 @@
               </td>
             </template>
             <template v-if="!item.year && item.rowspan">
-              <template v-if="item.whitelist_runs != undefined">
+              <template v-if="item.whitelist_x_raw_runs != undefined">
                 <td :rowspan="item.rowspan" v-if="columns.raw_x_dcs_runs">
                   {{item.raw_x_dcs_runs}} runs<br><small>{{item.raw_x_dcs_events}} events</small>
+                  <br><small>Whitelist: {{item.whitelist_type}}</small>
                 </td>
-                <td :rowspan="item.rowspan" v-if="columns.whitelist_runs">
-                  {{item.whitelist_runs}} runs<br><small>{{item.whitelist_events}} events</small>
-                  <template v-if="item.whitelist_and_raw_x_dcs_surplus_runs">
+                <td :rowspan="item.rowspan" v-if="columns.whitelist_x_raw_runs">
+                  {{item.whitelist_x_raw_runs}} runs<br><small>{{item.whitelist_x_raw_events}} events</small>
+                  <template v-if="item.whitelist_x_raw_and_raw_x_dcs_surplus_runs">
                     <br>
-                    <small style="color: green">+{{item.whitelist_and_raw_x_dcs_surplus_runs}} runs</small>
+                    <small style="color: green">+{{item.whitelist_x_raw_and_raw_x_dcs_surplus_runs}} runs</small>
                   </template>
-                  <template v-if="item.whitelist_and_raw_x_dcs_missing_runs">
+                  <template v-if="item.whitelist_x_raw_and_raw_x_dcs_missing_runs">
                     <br>
-                    <small style="color: red">-{{item.whitelist_and_raw_x_dcs_missing_runs}} runs</small>
+                    <small style="color: red">-{{item.whitelist_x_raw_and_raw_x_dcs_missing_runs}} runs</small>
                   </template>
-                  <template v-if="item.whitelist_and_raw_x_dcs_events_diff > 0">
+                  <template v-if="item.whitelist_x_raw_and_raw_x_dcs_events_diff > 0">
                     <br>
-                    <small style="color: green">+{{item.whitelist_and_raw_x_dcs_events_diff}} events</small>
+                    <small style="color: green">+{{item.whitelist_x_raw_and_raw_x_dcs_events_diff}} events</small>
                   </template>
-                  <template v-if="item.whitelist_and_raw_x_dcs_events_diff < 0">
+                  <template v-if="item.whitelist_x_raw_and_raw_x_dcs_events_diff < 0">
                     <br>
-                    <small style="color: red">{{item.whitelist_and_raw_x_dcs_events_diff}} events</small>
+                    <small style="color: red">{{item.whitelist_x_raw_and_raw_x_dcs_events_diff}} events</small>
                   </template>
                 </td>
-                <td :rowspan="item.rowspan" v-if="columns.whitelist_x_dcs_runs">
-                  {{item.whitelist_x_dcs_runs}} runs<br><small>{{item.whitelist_x_dcs_events}} events</small>
+                <td :rowspan="item.rowspan" v-if="columns.whitelist_x_raw_x_dcs_runs">
+                  {{item.whitelist_x_raw_x_dcs_runs}} runs<br><small>{{item.whitelist_x_raw_x_dcs_events}} events</small>
                   <template v-if="item.whitelist_x_dcs_and_raw_x_dcs_surplus_runs">
                     <br>
                     <small style="color: green">+{{item.whitelist_x_dcs_and_raw_x_dcs_surplus_runs}} runs</small>
@@ -235,6 +243,14 @@
               </td>
               <td :rowspan="item.rowspan" :class="cellColor(item)" v-if="columns.fraction && (index == 1 && columns.aod || index == 2 && columns.miniaod || index == 3 && columns.nanoaod)">
                 {{item.fraction}}
+                <template v-if="item.fraction < 1">
+                  <br>
+                  <small style="color: red">{{(item.fraction - 1).toFixed(8)}}</small>
+                </template>
+                <template v-if="item.fraction > 1">
+                  <br>
+                  <small style="color: green">+{{(item.fraction - 1).toFixed(8)}}</small>
+                </template>
               </td>
               <td :rowspan="item.rowspan" :class="cellColor(item)" v-if="columns.diff_to_parent && (index == 1 && columns.aod || index == 2 && columns.miniaod || index == 3 && columns.nanoaod)">
                 <template v-if="item.missing_runs">
@@ -267,8 +283,8 @@
           campaigns: {},
           columns: {
             raw_x_dcs_runs: true,
-            whitelist_runs: true,
-            whitelist_x_dcs_runs: true,
+            whitelist_x_raw_runs: true,
+            whitelist_x_raw_x_dcs_runs: true,
             aod: true,
             miniaod: true,
             nanoaod: true,

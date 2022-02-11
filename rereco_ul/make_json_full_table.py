@@ -23,15 +23,15 @@ def process_item(item):
 
 
 def calculate_fractions(item, parent):
-    if 'whitelist_runs' in item:
+    if 'whitelist_x_raw_runs' in item:
         aod = item
-        aod['whitelist_and_raw_x_dcs_surplus_runs'] = len(set(aod['whitelist_runs']) - set(aod['raw_x_dcs_runs']))
-        aod['whitelist_and_raw_x_dcs_missing_runs'] = len(set(aod['raw_x_dcs_runs']) - set(aod['whitelist_runs']))
-        aod['whitelist_and_raw_x_dcs_events_diff'] = aod['whitelist_events'] - aod['raw_x_dcs_events']
+        aod['whitelist_x_raw_and_raw_x_dcs_surplus_runs'] = len(set(aod['whitelist_x_raw_runs']) - set(aod['raw_x_dcs_runs']))
+        aod['whitelist_x_raw_and_raw_x_dcs_missing_runs'] = len(set(aod['raw_x_dcs_runs']) - set(aod['whitelist_x_raw_runs']))
+        aod['whitelist_x_raw_and_raw_x_dcs_events_diff'] = aod['whitelist_x_raw_events'] - aod['raw_x_dcs_events']
 
-        aod['whitelist_x_dcs_and_raw_x_dcs_surplus_runs'] = len(set(aod['whitelist_x_dcs_runs']) - set(aod['raw_x_dcs_runs']))
-        aod['whitelist_x_dcs_and_raw_x_dcs_missing_runs'] = len(set(aod['raw_x_dcs_runs']) - set(aod['whitelist_x_dcs_runs']))
-        aod['whitelist_x_dcs_and_raw_x_dcs_events_diff'] = aod['whitelist_x_dcs_events'] - aod['raw_x_dcs_events']
+        aod['whitelist_x_dcs_and_raw_x_dcs_surplus_runs'] = len(set(aod['whitelist_x_raw_x_dcs_runs']) - set(aod['raw_x_dcs_runs']))
+        aod['whitelist_x_dcs_and_raw_x_dcs_missing_runs'] = len(set(aod['raw_x_dcs_runs']) - set(aod['whitelist_x_raw_x_dcs_runs']))
+        aod['whitelist_x_dcs_and_raw_x_dcs_events_diff'] = aod['whitelist_x_raw_x_dcs_events'] - aod['raw_x_dcs_events']
 
         aod['fraction'] = aod['events'] / aod['raw_x_dcs_events'] if aod['raw_x_dcs_events'] else None
         aod['missing_runs'] = len(set(aod['raw_x_dcs_runs']) - set(aod['runs']))

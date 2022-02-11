@@ -83,10 +83,10 @@ for item in items:
         raw_events = item.get('events', 0)
         raw_x_dcs_runs = set(aod.get('raw_x_dcs_runs', []))
         raw_x_dcs_events = aod.get('raw_x_dcs_events', 0)
-        whitelist_runs = set(aod.get('whitelist_runs', []))
-        whitelist_events = aod.get('whitelist_events', 0)
-        whitelist_x_dcs_runs = set(aod.get('whitelist_x_dcs_runs', []))
-        whitelist_x_dcs_events = aod.get('whitelist_x_dcs_events', 0)
+        whitelist_x_raw_runs = set(aod.get('whitelist_x_raw_runs', []))
+        whitelist_x_raw_events = aod.get('whitelist_x_raw_events', 0)
+        whitelist_x_raw_x_dcs_runs = set(aod.get('whitelist_x_raw_x_dcs_runs', []))
+        whitelist_x_raw_x_dcs_events = aod.get('whitelist_x_raw_x_dcs_events', 0)
 
         result = {'input_dataset': raw_dataset,
                   'year': item['year'],
@@ -97,18 +97,18 @@ for item in items:
                   'raw_events': raw_events,
                   'raw_x_dcs_runs': len(raw_x_dcs_runs),
                   'raw_x_dcs_events': raw_x_dcs_events,
-                  'whitelist_runs': len(whitelist_runs),
-                  'whitelist_events': whitelist_events,
-                  'whitelist_x_dcs_runs': len(whitelist_x_dcs_runs),
-                  'whitelist_x_dcs_events': whitelist_x_dcs_events,
+                  'whitelist_x_raw_runs': len(whitelist_x_raw_runs),
+                  'whitelist_x_raw_events': whitelist_x_raw_events,
+                  'whitelist_x_raw_x_dcs_runs': len(whitelist_x_raw_x_dcs_runs),
+                  'whitelist_x_raw_x_dcs_events': whitelist_x_raw_x_dcs_events,
 
-                  'twiki_and_whitelist_missing_runs': len(whitelist_runs - twiki_runs),
-                  'twiki_and_whitelist_surplus_runs': len(twiki_runs - whitelist_runs),
-                  'twiki_and_whitelist_runs_diff': len(whitelist_runs - twiki_runs) + len(twiki_runs - whitelist_runs),
+                  'twiki_and_whitelist_x_raw_missing_runs': len(whitelist_x_raw_runs - twiki_runs),
+                  'twiki_and_whitelist_x_raw_surplus_runs': len(twiki_runs - whitelist_x_raw_runs),
+                  'twiki_and_whitelist_x_raw_runs_diff': len(whitelist_x_raw_runs - twiki_runs) + len(twiki_runs - whitelist_x_raw_runs),
 
-                  'whitelist_and_raw_x_dcs_missing_runs': len(raw_x_dcs_runs - whitelist_runs),
-                  'whitelist_and_raw_x_dcs_surplus_runs': len(whitelist_runs - raw_x_dcs_runs),
-                  'whitelist_and_raw_x_dcs_runs': len(raw_x_dcs_runs - whitelist_runs) + len(whitelist_runs - raw_x_dcs_runs),
+                  'whitelist_x_raw_and_raw_x_dcs_missing_runs': len(raw_x_dcs_runs - whitelist_x_raw_runs),
+                  'whitelist_x_raw_and_raw_x_dcs_surplus_runs': len(whitelist_x_raw_runs - raw_x_dcs_runs),
+                  'whitelist_x_raw_and_raw_x_dcs_runs': len(raw_x_dcs_runs - whitelist_x_raw_runs) + len(whitelist_x_raw_runs - raw_x_dcs_runs),
                   }
 
         for prefix, (thing, parent) in {'aod': (aod, None),
@@ -134,9 +134,9 @@ for item in items:
                 result[prefix + '_vs_parent_surplus_runs'] = len(runs - set(parent.get('runs', [])))
                 result[prefix + '_vs_parent_runs_diff'] = result[prefix + '_vs_parent_missing_runs'] + result[prefix + '_vs_parent_surplus_runs']
             elif dataset:
-                result[prefix + '_produced_vs_parent_ratio'] = float(events) / whitelist_events if whitelist_events else None
-                result[prefix + '_vs_parent_missing_runs'] = len(whitelist_runs - runs)
-                result[prefix + '_vs_parent_surplus_runs'] = len(runs - whitelist_runs)
+                result[prefix + '_produced_vs_parent_ratio'] = float(events) / whitelist_x_raw_events if whitelist_x_raw_events else None
+                result[prefix + '_vs_parent_missing_runs'] = len(whitelist_x_raw_runs - runs)
+                result[prefix + '_vs_parent_surplus_runs'] = len(runs - whitelist_x_raw_runs)
                 result[prefix + '_vs_parent_runs_diff'] = result[prefix + '_vs_parent_missing_runs'] + result[prefix + '_vs_parent_surplus_runs']
 
         results.append(result)

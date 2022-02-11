@@ -1,9 +1,11 @@
+from email.policy import default
 import sys
 import csv
 import json
 import os
 import random
 import re
+import hashlib
 from stats_rest import Stats2
 from connection_wrapper import ConnectionWrapper
 
@@ -84,9 +86,13 @@ def das_get_events_of_runs(dataset, runs, try_to_chunkify=True):
     if not dataset or not runs:
         return 0
 
+    if isinstance(runs, dict):
+        runs = set(runs.keys())
+
     runs = sorted(list(runs))
-    key = '%s___%s' % (','.join([str(x) for x in runs]), dataset)
+    key = hashlib.sha256(('%s___%s' % (dataset, json.dumps(runs, sort_keys=True))).encode('utf-8')).hexdigest()
     if key in das_events_of_runs_cache:
+        print('  Cache hit for %s, saved some time!' % (dataset))
         return das_events_of_runs_cache[key]
 
     try:
@@ -109,6 +115,46 @@ def das_get_events_of_runs(dataset, runs, try_to_chunkify=True):
 
     das_events_of_runs_cache[key] = 0
     return 0
+
+
+def das_get_events_of_runs_lumis(dataset, runs):
+    if not dataset or not runs:
+        return 0
+
+    key = hashlib.sha256(('%s___%s' % (dataset, json.dumps(runs, sort_keys=True))).encode('utf-8')).hexdigest()
+    if key in das_events_of_runs_cache:
+        print('  Cache hit for %s, saved some time!' % (dataset))
+        return das_events_of_runs_cache[key]
+
+    events_for_lumis = {}
+    print('  Getting events of %s runs with lumis of %s' % (len(runs), dataset))
+    for chunk in chunkify(sorted(list(runs)), 50):
+        chunk_str = '[%s]' % (','.join([str(x) for x in chunk]))
+        command = 'dasgoclient --query="file,run,lumi,events dataset=%s run in %s"' % (dataset, chunk_str)
+        result = os.popen(command).read()
+        result = [r.strip().split(' ')[1:] for r in result.split('\n') if r.strip()]
+        for row in result:
+            run = int(row[0])
+            lumi_list = [int(x) for x in row[1].strip('[]').split(',')]
+            if len(row) > 2 and row[2] != 'null':
+                event_list = [int(x) for x in row[2].strip('[]').split(',')]
+            else:
+                # In case there is no info about lumis
+                event_list = [0] * len(lumi_list)
+
+            for lumi, lumi_events in zip(lumi_list, event_list):
+                run_dict = events_for_lumis.setdefault(run, {})
+                run_dict[lumi] = max(run_dict.get(lumi, 0), lumi_events)
+
+    events = 0
+    for run, lumi_ranges in runs.items():
+        for lumi_range in lumi_ranges:
+            for lumi in range(lumi_range[0], lumi_range[1] + 1):
+                events += events_for_lumis.get(run, {}).get(lumi, 0)
+
+    print('  Got %s events' % (events))
+    das_events_of_runs_cache[key] = events
+    return events
 
 
 def das_get_runs(dataset):
@@ -137,14 +183,14 @@ def get_twiki_file(file_name):
     return rows
 
 
-def get_dcs_json_runs(file_name):
+def get_dcs_json(file_name):
     if not file_name:
-        return []
+        return {}
 
     with open(file_name) as dcs_file:
-        runs = [int(x) for x in json.load(dcs_file).keys()]
+        dcs_json = {int(run): lumis for run, lumis in json.load(dcs_file).items()}
 
-    return runs
+    return dcs_json
 
 
 def get_workflows_for_input(input_dataset):
@@ -258,7 +304,7 @@ exception_2016F_nonHIPM_runs = set([278769, 278801, 278802, 278803,
 
 for year, year_info in years.items():
     year_info['twiki_file'] = get_twiki_file(year_info['twiki_file_name'])
-    year_info['dcs_json'] = get_dcs_json_runs(year_info['dcs_json_path'])
+    year_info['dcs_json'] = get_dcs_json(year_info['dcs_json_path'])
 
 
 results = []
@@ -288,7 +334,9 @@ for index, raw_dataset in enumerate(datasets):
     raw_input_workflows = [w for w in raw_input_workflows if [tag for tag in aod_tags if tag in w['ProcessingString']]]
     raw_events = das_get_events(raw_dataset)
     raw_runs = das_get_runs(raw_dataset)
-    raw_x_dcs_runs = set(raw_runs).intersection(set(dcs_runs))
+    # List of run: lumis dictionary
+    raw_x_dcs_lumis = {run: lumis for run, lumis in dcs_runs.items() if run in raw_runs}
+
     # AOD, MiniAOD, NanoAOD
     aod_workflows = get_prepid_and_dataset(raw_input_workflows, ['AOD', 'MINIAOD', 'NANOAOD'], year_info)
     item = {'dataset': raw_dataset,
@@ -299,29 +347,70 @@ for index, raw_dataset in enumerate(datasets):
             'runs': list(raw_runs)}
 
     for aod_item in aod_workflows:
-        whitelist_runs = set(get_workflow(aod_item['workflow'])['RunWhitelist'])
-        whitelist_x_dcs_runs = whitelist_runs.intersection(set(dcs_runs))
-        whitelist_x_raw_runs = whitelist_runs.intersection(set(raw_runs))
-        whitelist_x_raw_x_dcs_runs = whitelist_x_raw_runs.intersection(set(dcs_runs))
-        raw_x_dcs_runs_copy = set(raw_x_dcs_runs)
-        if '2016F' in raw_dataset:
-            if 'HIPM' in aod_item['processing_string']:
-                # HIPM
-                raw_x_dcs_runs_copy -= exception_2016F_nonHIPM_runs
-                whitelist_x_raw_runs -= exception_2016F_nonHIPM_runs
-                whitelist_x_raw_x_dcs_runs -= exception_2016F_nonHIPM_runs
-            else:
-                # non-HIPM
-                raw_x_dcs_runs_copy -= exception_2016F_HIPM_runs
-                whitelist_x_raw_runs -= exception_2016F_HIPM_runs
-                whitelist_x_raw_x_dcs_runs -= exception_2016F_HIPM_runs
+        workflow = get_workflow(aod_item['workflow'])
+        lumilist = workflow.get('LumiList')
+        runwhitelist = workflow.get('RunWhitelist')
+        if lumilist:
+            aod_item['whitelist_type'] = 'lumis'
+            lumilist = {int(k): v for k, v in lumilist.items()}
+            # RAW x DCS
+            raw_x_dcs_lumis = {run: lumis for run, lumis in dcs_runs.items() if run in raw_runs}
+            # Whitelist x RAW
+            whitelist_x_raw_lumis = dict(r for r in lumilist.items() if r[0] in raw_runs)
+            # 2016F exception
+            if '2016F' in raw_dataset:
+                if 'HIPM' in aod_item['processing_string']:
+                    # HIPM: raw_x_dcs_runs -= exception_2016F_nonHIPM_runs
+                    raw_x_dcs_lumis = [r for r in raw_x_dcs_lumis.items() if r[0] not in exception_2016F_nonHIPM_runs]
+                    whitelist_x_raw_lumis = dict(r for r in whitelist_x_raw_lumis.items() if r[0] not in exception_2016F_nonHIPM_runs)
+                else:
+                    # non-HIPM: raw_x_dcs_runs -= exception_2016F_HIPM_runs
+                    raw_x_dcs_lumis = [r for r in raw_x_dcs_lumis.items() if r[0] not in exception_2016F_HIPM_runs]
+                    whitelist_x_raw_lumis = dict(r for r in whitelist_x_raw_lumis.items() if r[0] not in exception_2016F_HIPM_runs)
 
-        aod_item['raw_x_dcs_runs'] = list(raw_x_dcs_runs_copy)
-        aod_item['raw_x_dcs_events'] = das_get_events_of_runs(raw_dataset, aod_item['raw_x_dcs_runs'])
-        aod_item['whitelist_runs'] = list(whitelist_runs)
-        aod_item['whitelist_events'] = das_get_events_of_runs(raw_dataset, aod_item['whitelist_runs'])
-        aod_item['whitelist_x_dcs_runs'] = list(whitelist_x_dcs_runs)
-        aod_item['whitelist_x_dcs_events'] = das_get_events_of_runs(raw_dataset, aod_item['whitelist_x_dcs_runs'])
+            # Whitelist x RAW x DCS
+            whitelist_x_raw_x_dcs_lumis = dict(r for r in whitelist_x_raw_lumis.items() if r[0] in dcs_runs)
+
+            # Events
+            raw_x_dcs_events = das_get_events_of_runs_lumis(raw_dataset, raw_x_dcs_lumis)
+            whitelist_x_raw_events = das_get_events_of_runs_lumis(raw_dataset, whitelist_x_raw_lumis)
+            whitelist_x_raw_x_dcs_events = das_get_events_of_runs_lumis(raw_dataset, whitelist_x_raw_x_dcs_lumis)
+
+            # Get only runs
+            raw_x_dcs_runs = list(raw_x_dcs_lumis)
+            whitelist_x_raw_runs = list(whitelist_x_raw_lumis)
+            whitelist_x_raw_x_dcs_runs = list(whitelist_x_raw_x_dcs_lumis)
+        else:
+            aod_item['whitelist_type'] = 'runs'
+            # RAW x DCS
+            raw_x_dcs_runs = set(dcs_runs).intersection(set(raw_runs))
+            # Whitelist x RAW
+            whitelist_x_raw_runs = set(raw_runs).intersection(set(runwhitelist))
+            # 2016F exception
+            if '2016F' in raw_dataset:
+                if 'HIPM' in aod_item['processing_string']:
+                    # HIPM:
+                    raw_x_dcs_runs -= exception_2016F_nonHIPM_runs
+                    whitelist_x_raw_runs -= exception_2016F_nonHIPM_runs
+                else:
+                    # non-HIPM:
+                    raw_x_dcs_runs -= exception_2016F_HIPM_runs
+                    whitelist_x_raw_runs -= exception_2016F_HIPM_runs
+
+            # Whitelist x RAW x DCS
+            whitelist_x_raw_x_dcs_runs = whitelist_x_raw_runs.intersection(set(dcs_runs.keys()))
+
+            # Events
+            raw_x_dcs_events = das_get_events_of_runs(raw_dataset, raw_x_dcs_runs)
+            whitelist_x_raw_events = das_get_events_of_runs(raw_dataset, whitelist_x_raw_runs)
+            whitelist_x_raw_x_dcs_events = das_get_events_of_runs(raw_dataset, whitelist_x_raw_x_dcs_runs)
+
+        aod_item['raw_x_dcs_runs'] = list(raw_x_dcs_runs)
+        aod_item['raw_x_dcs_events'] = raw_x_dcs_events
+        aod_item['whitelist_x_raw_runs'] = list(whitelist_x_raw_runs)
+        aod_item['whitelist_x_raw_events'] = whitelist_x_raw_events
+        aod_item['whitelist_x_raw_x_dcs_runs'] = list(whitelist_x_raw_x_dcs_runs)
+        aod_item['whitelist_x_raw_x_dcs_events'] = whitelist_x_raw_x_dcs_events
 
     results.append(item)
 
