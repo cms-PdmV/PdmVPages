@@ -77,8 +77,13 @@ def das_get_events(dataset):
     if dataset in das_events_cache:
         return das_events_cache[dataset]
 
-    result = int(os.popen('dasgoclient --query="dataset=' + dataset + ' | grep dataset.nevents"').read().strip())
-    das_events_cache[dataset] = result
+    result = 0
+    try:
+        result = int(os.popen('dasgoclient --query="dataset=' + dataset + ' | grep dataset.nevents"').read().strip())
+        das_events_cache[dataset] = result
+    except Exception as ex:
+        print('Error getting events for %s: %s' % (dataset, str(ex)))
+
     return result
 
 
@@ -131,20 +136,23 @@ def das_get_events_of_runs_lumis(dataset, runs):
     for chunk in chunkify(sorted(list(runs)), 50):
         chunk_str = '[%s]' % (','.join([str(x) for x in chunk]))
         command = 'dasgoclient --query="file,run,lumi,events dataset=%s run in %s"' % (dataset, chunk_str)
-        result = os.popen(command).read()
-        result = [r.strip().split(' ')[1:] for r in result.split('\n') if r.strip()]
-        for row in result:
-            run = int(row[0])
-            lumi_list = [int(x) for x in row[1].strip('[]').split(',')]
-            if len(row) > 2 and row[2] != 'null':
-                event_list = [int(x) for x in row[2].strip('[]').split(',')]
-            else:
-                # In case there is no info about lumis
-                event_list = [0] * len(lumi_list)
+        try:
+            result = os.popen(command).read()
+            result = [r.strip().split(' ')[1:] for r in result.split('\n') if r.strip()]
+            for row in result:
+                run = int(row[0])
+                lumi_list = [int(x) for x in row[1].strip('[]').split(',')]
+                if len(row) > 2 and row[2] != 'null':
+                    event_list = [int(x) for x in row[2].strip('[]').split(',')]
+                else:
+                    # In case there is no info about lumis
+                    event_list = [0] * len(lumi_list)
 
-            for lumi, lumi_events in zip(lumi_list, event_list):
-                run_dict = events_for_lumis.setdefault(run, {})
-                run_dict[lumi] = max(run_dict.get(lumi, 0), lumi_events)
+                for lumi, lumi_events in zip(lumi_list, event_list):
+                    run_dict = events_for_lumis.setdefault(run, {})
+                    run_dict[lumi] = max(run_dict.get(lumi, 0), lumi_events)
+        except Exception as ex:
+            print('Error in events of lumis for %s, chunk %s, command %s: %s' % (dataset, chunk_str, command, str(ex)))
 
     events = 0
     for run, lumi_ranges in runs.items():
@@ -164,9 +172,15 @@ def das_get_runs(dataset):
     if dataset in das_runs_cache:
         return das_runs_cache[dataset]
 
-    stream = os.popen('dasgoclient --query="run dataset=' + dataset + '"')
-    result = set([int(r.strip()) for r in stream.read().split('\n') if r.strip()])
-    das_runs_cache[dataset] = result
+    result = set()
+    try:
+        stream = os.popen('dasgoclient --query="run dataset=' + dataset + '"')
+        result = set([int(r.strip()) for r in stream.read().split('\n') if r.strip()])
+        print('    Got %s runs for %s' % (len(result), dataset))
+        das_runs_cache[dataset] = result
+    except Exception as ex:
+        print('Error getting %s runs :%s' % (dataset, str(ex)))
+
     return result
 
 
