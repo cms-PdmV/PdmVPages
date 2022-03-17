@@ -1,10 +1,19 @@
 import json
 import time
+import os
 from urllib.request import Request, urlopen
 from connection_wrapper import ConnectionWrapper
 
 
 cmsweb = ConnectionWrapper('cmsweb.cern.ch', keep_open=True)
+try:
+    # Try to import and setup rucio
+    os.environ['RUCIO_CONFIG'] = 'rucio.cfg'
+    from rucio.client.ruleclient import RuleClient
+    rucio = RuleClient()
+except Exception as ex:
+    print('Error setting up rucio %s' % (ex))
+    rucio = None
 
 
 def make_simple_request(url):
@@ -44,6 +53,21 @@ def yield_staging_workflows():
         page += 1
 
 
+def get_rucio_rules(transfers):
+    rules = {'OK': [], 'REPLICATING': [], 'STUCK': [], 'SUSPENDED': []}
+    if rucio:
+        try:
+            print('Getting rules for %s transfers' % (len(transfers)))
+            for transfer_id in transfers:
+                rule = rucio.get_replication_rule(transfer_id)
+                state = rule.get('state').upper()
+                rules.setdefault(state).append(transfer_id)
+        except Exception as ex:
+            print('Rucio error %s' % (ex))
+
+    return rules
+
+
 results = []
 for workflow in yield_staging_workflows():
     workflow_name = workflow['RequestName']
@@ -62,7 +86,9 @@ for workflow in yield_staging_workflows():
     transfers = transfer_doc.get('transfers', [])
     for transfer in transfers:
         completion = transfer.get('completion', [0.0])
-        transfer_count = len(transfer.get('transferIDs', []))
+        transfers = transfer.get('transferIDs', [])
+        rucio_rules = get_rucio_rules(transfers)
+        transfer_count = len(transfers)
         dataset = transfer.get('dataset')
         datatype = transfer.get('dataType', 'primary')
         last_completion = completion[-1]
@@ -98,6 +124,7 @@ for workflow in yield_staging_workflows():
                         'stuck_time': stuck_time,
                         'speed': speed,
                         'eta': eta,
+                        'rucio_rules': rucio_rules,
                         'transfers': transfer_count})
 
 with open('data.json', 'w') as output_file:

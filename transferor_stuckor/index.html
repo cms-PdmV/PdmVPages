@@ -51,6 +51,25 @@
       a {
         color: #005eb6;
       }
+      ol {
+        text-align: left;
+      }
+      .rule-state {
+        cursor: pointer;
+        font-weight: 700;
+      }
+      .rule-state-OK {
+        color: green
+      }
+      .rule-state-REPLICATING {
+        color: #3498db
+      }
+      .rule-state-STUCK {
+        color: red
+      }
+      .rule-state-SUSPENDED {
+        color: #b71540
+      }
 
       /* Row number in table */
       tbody tr {
@@ -98,6 +117,9 @@
               Transfers
             </span>
           </th>
+          <th>
+            Rucio rules
+          </th>
           <th :class="sortOn == 'time_in_staging' ? 'sorted-by' : ''">
             <span class="sort" @click="changeSortToColumn('time_in_staging')">
               Staging for
@@ -134,6 +156,17 @@
             </td>
             <td><template v-if="row.first_completion > 0">{{row.first_completion}}% &#8594; </template><a target="_blank" :href="makeTransferorLink(row.workflow)">{{row.last_completion}}%</a></td>
             <td>{{row.transfers}}</td>
+            <td>
+              <template v-for="state in ['OK', 'REPLICATING', 'STUCK', 'SUSPENDED']" :key="state">
+                <b v-if="row.rucio_rules[state].length"
+                   :class="'rule-state rule-state-' + state"
+                   :title="'Toggle ' + state + ' list'"
+                   @click="toggleRules(row, state)">{{state}}: {{row.rucio_rules[state].length}}<br></b>
+                <ol v-if="row.rucio_rules_visible[state]">
+                  <li v-for="rule in row.rucio_rules[state]">{{rule}}</li>
+                </ol>
+              </template>
+            </td>
             <td>{{niceTime(row.time_in_staging)}}</td>
             <td>{{niceTime(row.stuck_time)}}</td>
             <td>{{row.speed}}%/day</td>
@@ -180,6 +213,7 @@
           $.get( "data.json", function( data ) {
             data.forEach(element => {
               element.eta = element.eta == 0 ? Infinity : element.eta;
+              element.rucio_rules_visible = {'OK': false, 'REPLICATING': false, 'STUCK': false, 'SUSPENDED': false}
             });
             component.data = data;
             component.applyFilters();
@@ -302,6 +336,9 @@
           },
           makeTransferorLink(workflow) {
             return 'https://cmsweb.cern.ch/ms-transferor/data/info?request=' + workflow;
+          },
+          toggleRules: function(entry, state) {
+            entry.rucio_rules_visible[state] = !entry.rucio_rules_visible[state];
           }
         }
       })
