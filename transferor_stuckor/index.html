@@ -163,7 +163,9 @@
                    :title="'Toggle ' + state + ' list'"
                    @click="toggleRules(row, state)">{{state}}: {{row.rucio_rules[state].length}}<br></b>
                 <ol v-if="row.rucio_rules_visible[state]">
-                  <li v-for="rule in row.rucio_rules[state]">{{rule}}</li>
+                  <li v-for="rule in row.rucio_rules[state]">
+                    <a :href="'https://cms-rucio-webui.cern.ch/rule?rule_id=' + rule" target="_blank" title="Open rule in Rucio">{{rule}}</a>
+                  </li>
                 </ol>
               </template>
             </td>
