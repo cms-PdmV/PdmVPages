@@ -328,7 +328,7 @@
             }
 
             seconds -= minutes * 60
-            return seconds + 's'
+            return Math.round(seconds) + 's'
           },
           makeStatsLink(workflow) {
             return 'https://cms-pdmv.cern.ch/stats?workflow_name=' + workflow;
