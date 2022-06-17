@@ -10,6 +10,7 @@ try:
     # Try to import and setup rucio
     os.environ['RUCIO_CONFIG'] = 'rucio.cfg'
     from rucio.client.ruleclient import RuleClient
+    from rucio.common.exception import RuleNotFound
     rucio = RuleClient()
 except Exception as ex:
     print('Error setting up rucio %s' % (ex))
@@ -54,16 +55,26 @@ def yield_staging_workflows():
 
 
 def get_rucio_rules(transfers):
-    rules = {'OK': [], 'REPLICATING': [], 'STUCK': [], 'SUSPENDED': []}
+    rules = {'OK': [],
+             'REPLICATING': [],
+             'STUCK': [],
+             'SUSPENDED': [],
+             'MISSING': [],
+             'OOPSIE-WOOPSIE': []}
     if rucio:
-        try:
-            print('Getting rules for %s transfers' % (len(transfers)))
-            for transfer_id in transfers:
+        print('Getting rules for %s transfers' % (len(transfers)))
+        for transfer_id in transfers:
+            print('  Rule %s' % (transfer_id))
+            try:
                 rule = rucio.get_replication_rule(transfer_id)
                 state = rule.get('state').upper()
                 rules.setdefault(state).append(transfer_id)
-        except Exception as ex:
-            print('Rucio error %s' % (ex))
+            except RuleNotFound as rnf:
+                print('  Rule not found %s' % (transfer_id))
+                rules.setdefault('MISSING').append(transfer_id)
+            except Exception as ex:
+                print('  Rucio error %s' % (ex))
+                rules.setdefault('OOPSIE-WOOPSIE').append(transfer_id)
 
     return rules
 

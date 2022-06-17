@@ -70,6 +70,12 @@
       .rule-state-SUSPENDED {
         color: #7f8fa6;
       }
+      .rule-state-MISSING {
+        color: purple;
+      }
+      .rule.state-OOPSIE-WOOPSIE {
+        color: deeppink;
+      }
 
       /* Row number in table */
       tbody tr {
@@ -125,7 +131,7 @@
               Staging for
             </span>
           </th>
-          <th :class="sortOn == 'stuck_time' ? 'sorted-by' : ''">
+          <th :class="sortOn == 'stuck_time' ? 'sorted-by' : ''" title="Time since last completion % change">
             <span class="sort" @click="changeSortToColumn('stuck_time')">
               "Stuck" for
             </span>
@@ -157,7 +163,7 @@
             <td><template v-if="row.first_completion > 0">{{row.first_completion}}% &#8594; </template><a target="_blank" :href="makeTransferorLink(row.workflow)">{{row.last_completion}}%</a></td>
             <td>{{row.transfers}}</td>
             <td>
-              <template v-for="state in ['OK', 'REPLICATING', 'STUCK', 'SUSPENDED']" :key="state">
+              <template v-for="state in ['OK', 'REPLICATING', 'STUCK', 'SUSPENDED', 'MISSING', 'OOPSIE-WOOPSIE']" :key="state">
                 <b v-if="row.rucio_rules[state].length"
                    :class="'rule-state rule-state-' + state"
                    :title="'Toggle ' + state + ' list'"
@@ -170,7 +176,14 @@
               </template>
             </td>
             <td>{{niceTime(row.time_in_staging)}}</td>
-            <td>{{niceTime(row.stuck_time)}}</td>
+            <td>
+              <template v-if="row.stuck_time == 0">
+                &#x1F44D;
+              </template>
+              <template v-else>
+                {{niceTime(row.stuck_time)}}
+              </template>
+            </td>
             <td>{{row.speed}}%/day</td>
             <td>
               <template v-if="row.eta != Infinity && row.last_completion != 100">
@@ -215,7 +228,12 @@
           $.get( "data.json", function( data ) {
             data.forEach(element => {
               element.eta = element.eta == 0 ? Infinity : element.eta;
-              element.rucio_rules_visible = {'OK': false, 'REPLICATING': false, 'STUCK': false, 'SUSPENDED': false}
+              element.rucio_rules_visible = {'OK': false,
+                                             'REPLICATING': false,
+                                             'STUCK': false,
+                                             'SUSPENDED': false,
+                                             'MISSING': false,
+                                             'OOPSIE-WOOPSIE': false}
             });
             component.data = data;
             component.applyFilters();
