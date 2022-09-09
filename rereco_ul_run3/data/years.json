@@ -1,0 +1,23 @@
+{
+  "2022": {
+    "twiki_file_name": "",
+    "dcs_json_path": "",
+    "campaigns": {
+      "AOD": {
+        "AOD": [
+          "PromptReco"
+        ]
+      },
+      "MINIAOD": {
+        "MiniAODv3": [
+          "PromptReco"
+        ]
+      },
+      "NANOAOD": {
+        "NanoAODv10": [
+          "PromptNanoAODv10"
+        ]
+      }
+    }
+  }
+}

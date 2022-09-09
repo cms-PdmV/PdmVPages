@@ -1,0 +1,8 @@
+# Ignore IntelliJ PyCharm
+.idea/
+
+# Ignore sample dataset
+sample/
+
+# Ignore PyCache
+__pycache__

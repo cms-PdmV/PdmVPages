@@ -1,0 +1,11 @@
+# Ignore IntelliJ PyCharm
+.idea/
+
+# Ignore JSON Output
+data*.json
+
+# Ignore sample dataset
+sample/
+
+# Ignore PyCache
+__pycache__

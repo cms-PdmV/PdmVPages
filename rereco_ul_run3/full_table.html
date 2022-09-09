@@ -1,10 +1,12 @@
 <html>
   <head>
-    <title>PdmV ReReco UL</title>
+    <title>PdmV ReReco UL - Run3</title>
     <script src="https://cdn.jsdelivr.net/npm/vue@2"></script>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script type="module" src="https://unpkg.com/ionicons@5.5.2/dist/ionicons/ionicons.esm.js"></script>
+    <script nomodule src="https://unpkg.com/ionicons@5.5.2/dist/ionicons/ionicons.js"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/css/bootstrap.min.css">
-    <link rel="icon" type="image/png" href="pdmv.png" />
+    <link rel="icon" type="image/png" href="assets/pdmv.png" />
     <style>
       body {
         background: #fafafa;
@@ -67,9 +69,9 @@
   </head>
   <body>
     <div id="app">
-      <h3 style="text-align: center; margin-top: 20px;">PdmV ReReco UL <i style="color: red">full</i> table</h3>
+      <h3 style="text-align: center; margin-top: 20px;">PdmV ReReco UL <i style="color: red">full</i> table - Run3</h3>
       <div style="text-align:center;">
-        <a href="https://pdmv-pages.web.cern.ch/">PdmV pages</a> | <a href="../rereco_ul_run3/full_table.html"><i style="color: red">Run 3</i> table</a> | <a href="index.html">User table</a>
+        <a href="https://pdmv-pages.web.cern.ch/">PdmV pages</a> | <a href="../rereco_ul/full_table.html"><i style="color: purple">Run 2</i> table</a> | <a href="index.html">User table</a>
       </div>
       <div style="text-align: center; margin: 8px;">
         Campaigns:
@@ -82,14 +84,18 @@
         </template>
         <br>
         Columns:
+        <!-- Whitelist section disabled
         <input type="checkbox" :checked="columns.raw_x_dcs_runs" @input="columns.raw_x_dcs_runs = $event.target.checked; applyFilters()"/> RAW x DCS runs
         <input type="checkbox" :checked="columns.whitelist_x_raw_runs" @input="columns.whitelist_x_raw_runs = $event.target.checked; applyFilters()"/> Whitelist x RAW runs
         <input type="checkbox" :checked="columns.whitelist_x_raw_x_dcs_runs" @input="columns.whitelist_x_raw_x_dcs_runs = $event.target.checked; applyFilters()"/> Whitelist x RAW x DCS runs
+        -->
         <input type="checkbox" :checked="columns.aod" @input="columns.aod = $event.target.checked; applyFilters()"/> AOD
         <input type="checkbox" :checked="columns.miniaod" @input="columns.miniaod = $event.target.checked; applyFilters()"/> MiniAOD
         <input type="checkbox" :checked="columns.nanoaod" @input="columns.nanoaod = $event.target.checked; applyFilters()"/> NanoAOD
-        <input type="checkbox" :checked="columns.fraction" @input="columns.fraction = $event.target.checked; applyFilters()"/> Fraction
+        <input type="checkbox" :checked="columns.fraction" @input="columns.fraction = $event.target.checked; applyFilters()"/> Events & Fraction
+        <!-- Disable difference column
         <input type="checkbox" :checked="columns.diff_to_parent" @input="columns.diff_to_parent = $event.target.checked; applyFilters()"/> Diff to parent
+        -->
         <br>
         Updated: {{lastUpdate}}
       </div>
@@ -141,7 +147,9 @@
             <input type="text" class="header-search" placeholder="Type to search..." v-model="search.aod_dataset" @input="applyFilters()">
           </th>
           <th v-if="columns.aod && columns.fraction">
-            <span class="sort" @click="changeSortToColumn('aod_fraction')">Fraction</span>
+            <span class="sort" @click="changeSortToColumn('aod_fraction')">Events</span>
+            <br>
+            <small>Fraction</small>
             <br>
             <small>Fraction - 1</small>
           </th>
@@ -156,7 +164,9 @@
             <input type="text" class="header-search" placeholder="Type to search..." v-model="search.miniaod_dataset" @input="applyFilters()">
           </th>
           <th v-if="columns.miniaod && columns.fraction">
-            <span class="sort" @click="changeSortToColumn('miniaod_fraction')">Fraction</span>
+            <span class="sort" @click="changeSortToColumn('miniaod_fraction')">Events</span>
+            <br>
+            <small>Fraction</small>
             <br>
             <small>Fraction - 1</small>
           </th>
@@ -171,7 +181,9 @@
             <input type="text" class="header-search" placeholder="Type to search..." v-model="search.nanoaod_dataset" @input="applyFilters()">
           </th>
           <th v-if="columns.nanoaod && columns.fraction">
-            <span class="sort" @click="changeSortToColumn('nanoaod_fraction')">Fraction</span>
+            <span class="sort" @click="changeSortToColumn('nanoaod_fraction')">Events</span>
+            <br>
+            <small>Fraction</small>
             <br>
             <small>Fraction - 1</small>
           </th>
@@ -186,7 +198,13 @@
               <td :rowspan="item.rowspan">
                 <a target="_blank" :href="makeDASLink(item.dataset)">{{item.dataset}}</a>
                 <br>
-                <small>{{item.runs}}&nbsp;runs | {{item.events}}&nbsp;events</small>
+                <small><ion-icon name="eye-outline" @click="checkDisplayRuns(item.dataset)"></ion-icon> {{item.runs.length}}&nbsp;runs | {{item.events}}&nbsp;events</small>
+                <!-- Display runs for RAW dataset -->
+                <div v-if="item.dataset === displayRuns.RAW" class="row">
+                  <template v-for="run in item.runs">
+                      <div class="col">{{run}}</div>
+                  </template>
+                </div>
               </td>
             </template>
             <template v-if="!item.year && item.rowspan">
@@ -239,10 +257,20 @@
                 <br>
                 <a target="_blank" :href="makeDASLink(item.dataset)">{{item.dataset}}</a>
                 <br>
-                <small>{{item.runs}}&nbsp;runs | {{item.events}}&nbsp;events | {{item.processing_string}} | {{item.campaign}}</small>
+                <small><ion-icon name="eye-outline" @click="checkDisplayRuns(item.dataset)"></ion-icon> {{item.runs.length}}&nbsp;runs {{item.processing_string}} | {{item.campaign}}</small>
+                <!-- Display runs for AOD, MINIAOD or NANOAOD dataset -->
+                <div v-if="item.dataset === displayRuns.AOD || item.dataset === displayRuns.MINIAOD || item.dataset === displayRuns.NANOAOD" class="row">
+                  <template v-for="run in item.runs">
+                      <div class="col">{{run}}</div>
+                  </template>
+                </div>
               </td>
               <td :rowspan="item.rowspan" :class="cellColor(item)" v-if="columns.fraction && (index == 1 && columns.aod || index == 2 && columns.miniaod || index == 3 && columns.nanoaod)">
-                {{item.fraction}}
+                {{item.events}}
+                <template>
+                  <br>
+                  <small style="color: blue">{{(+item.fraction).toFixed(8)}}</small>
+                </template>
                 <template v-if="item.fraction < 1">
                   <br>
                   <small style="color: red">{{(item.fraction - 1).toFixed(8)}}</small>
@@ -281,15 +309,21 @@
           sortOn: 'year',
           sortOrder: 1,
           campaigns: {},
+          displayRuns: {
+            RAW: "",
+            AOD: "",
+            MINIAOD: "",
+            NANOAOD: ""
+          }, // We're going to use this as a prop for component.
           columns: {
-            raw_x_dcs_runs: true,
-            whitelist_x_raw_runs: true,
-            whitelist_x_raw_x_dcs_runs: true,
+            raw_x_dcs_runs: false, // Disable by default for Run3
+            whitelist_x_raw_runs: false, // Disable by default for Run3
+            whitelist_x_raw_x_dcs_runs: false, // Disable by default for Run3
             aod: true,
             miniaod: true,
             nanoaod: true,
             fraction: true,
-            diff_to_parent: true
+            diff_to_parent: false // Disable by default for Run3
           },
           search: {
             dataset: undefined,
@@ -309,7 +343,7 @@
           this.sortOrder = parseInt(urlParams.sort_order || 1);
 
           const component = this;
-          $.get( "data_full_table.json", function( data ) {
+          $.get( "output/data_full_table.json", function( data ) {
             data.forEach(element => {
               element.forEach(item => {
                 if (item.fraction) {
@@ -326,11 +360,33 @@
           }).fail(function(err) {
             alert("Error getting data: " + err.statusText);
           });
-          $.get( "original_table_timestamp.txt", function( data ) {
+          $.get( "output/original_table_timestamp.txt", function( data ) {
             component.lastUpdate = data;
           });
         },
         methods: {
+          checkDisplayRuns: function (datasetName) {
+            // Valid Datatiers
+            const validDatatiers = [
+                "RAW", "AOD", "MINIAOD", "NANOAOD"
+            ];
+
+            let datatierSplit = datasetName.split("/")
+            let datatier = datatierSplit[datatierSplit.length - 1].trim()
+            if (!validDatatiers.includes(datatier)) {
+              console.error("Datatier: " + datatier + " does not match with any of the columns of this table")
+              return
+            }
+
+            // Check if the element exist
+            if (this.displayRuns[datatier] === datasetName) {
+              this.displayRuns[datatier] = "";
+            }
+            else {
+              // Add it
+              this.displayRuns[datatier] = datasetName;
+            }
+          },
           sortComparator: function(a, b) {
             let itemA = a[0];
             let itemB = b[0];
