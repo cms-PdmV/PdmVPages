@@ -540,10 +540,10 @@ def load_json(path: str) -> dict:
 
 
 # Load dataset names using file
-# datasets = load_datasets_from_file(path="data/datasets.txt")
+datasets = load_datasets_from_file(path="data/datasets.txt")
 
 # Load the names of the interest datasets
-datasets = das_get_all_datasets_names_year(years=["2022"])
+# datasets = das_get_all_datasets_names_year(years=["2022"])
 print('Read %s datasets from file' % (len(datasets)))
 
 if '--debug' in sys.argv:
