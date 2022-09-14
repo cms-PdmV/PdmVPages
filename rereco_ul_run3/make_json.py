@@ -293,28 +293,60 @@ def get_prepid_and_dataset(workflows, datatiers, year_dict):
     return results
 
 
-def parse_inject_processing_string(dataset: str, processing_str: str, datatier: str) -> str:
+def parse_inject_processing_string(
+        raw_dataset: str,
+        processing_str: str,
+        datatier: str,
+        parent_dataset: str = None,
+        versions: List[int] = [1]
+) -> List[str]:
     """
+    TO FIX: Use wildcards to get the data of AOD, MINIAOD and NANOAOD
     Creates the query to retrieve the dataset for a given processing string
 
     Parameters
     -----------------
-    dataset : str
+    raw_dataset : str
         Dataset name without any processing string, ex: /BTagMu/Run2018A-v1/RAW
+    parent_dataset: str = None
+        Parent dataset name, we will only use it to extract the version. We used this approach only
+        to get the correct version because when fetching datasets from DAS we can get different patterns of
+        processing strings.
     processing_str : str
         Processing string to include in the query
     datatier : str in (AOD, MINIAOD, NANOAOD)
         Type of datatier to retrieve
+    versions : List[int]
+        Versions to retrieve from a processing strings if datatier is AOD. For example for datasets /Muon/Run2022D-PromptReco-, we have:
+        /Muon/Run2022D-PromptReco-v1/AOD, /Muon/Run2022D-PromptReco-v2/AOD,
+        /Muon/Run2022D-PromptReco-v3/AOD. This dataset has 3 versions: v1, v2, v3 so versions param would have a list
+        with version numbers: [1, 2, 3].
 
     Returns
     ------------------
-    str
-        Query for retriving a dataset with a specific processing string
+    List[str]
+        Queries for retriving the datasets related with a specific processing string
     """
-    token = [t for t in dataset.split("/") if t]  # Split and delete empty strings
-    run_data_tokens = token[1].split("-")
-    inj_pr_str = f"{run_data_tokens[0]}-{processing_str}-{run_data_tokens[1]}"
-    return f"/{token[0]}/{inj_pr_str}/{datatier}"
+    if datatier != "AOD" and parent_dataset:
+        token = [t for t in raw_dataset.split("/") if t]  # Split and delete empty strings
+        parent_tokens = [t for t in parent_dataset.split("/") if t]  # Split and delete empty strings for AOD dataset names
+        run_data_tokens = token[1].split("-")
+        parent_run_data_tokens = parent_tokens[1].split("-")
+        inj_pr_str = f"{run_data_tokens[0]}-{processing_str}-{parent_run_data_tokens[-1]}" # Use the correct version
+        return [f"/{token[0]}/{inj_pr_str}/{datatier}"]
+
+    # Only append multiple queries for the AOD datatier
+    if datatier == "AOD":
+        queries = []
+        for version in versions:
+            token = [t for t in raw_dataset.split("/") if t]  # Split and delete empty strings
+            run_data_tokens = token[1].split("-")
+            inj_pr_str = f"{run_data_tokens[0]}-{processing_str}-v{version}"
+            queries.append(f"/{token[0]}/{inj_pr_str}/{datatier}")
+        return queries
+
+    # This should not happen, for MINIAOD and NANOAOD parent dataset should be defined
+    raise Exception("Parent dataset in [get_dataset_steps] should be defined")
 
 
 def das_get_dataset_info(dataset: str):
@@ -355,8 +387,9 @@ def das_get_dataset_info(dataset: str):
     return None
 
 
-def get_dataset_steps(dataset: str, datatiers: List[str], year_dict: dict) -> dict:
+def get_dataset_steps(dataset: str, datatiers: List[str], year_dict: dict, parent_dataset: str = None) -> dict:
     """
+    TO FIX: Use wildcards to get the data of AOD, MINIAOD and NANOAOD
     For a RAW dataset, this function retrieves the all the datatiers and processing strings required
 
     Parameters
@@ -387,39 +420,47 @@ def get_dataset_steps(dataset: str, datatiers: List[str], year_dict: dict) -> di
     for campaign, processing_str_list in datatier_campaigns.items():
         # Only use the lastest processing string from the config file
         processing_str = processing_str_list[-1]
-        # Create the query for retrieving
-        dataset_query = parse_inject_processing_string(
-            dataset=dataset, processing_str=processing_str, datatier=current_datatier)
+        # Create the queries for retrieving datasets
+        dataset_queries: List[str] = parse_inject_processing_string(
+            raw_dataset=dataset, processing_str=processing_str,
+            datatier=current_datatier, versions=list(range(1, 6)),
+            parent_dataset=parent_dataset
+        )
 
-        print(f"[get_dataset_steps] Dataset for querying: {dataset_query}")
-        # Get dataset info
-        dataset_result = das_get_dataset_info(dataset=dataset_query)
-        if dataset_result is None:
-            # Dataset is not valid
-            print(f"[get_dataset_steps] Dataset not valid: {dataset_query}")
-            continue
+        # Iterate over all versions
+        for dataset_query in dataset_queries:
+            print(f"[get_dataset_steps] Dataset for querying: {dataset_query}")
+            # Get dataset info
+            dataset_result = das_get_dataset_info(dataset=dataset_query)
+            if dataset_result is None:
+                # Dataset is not valid
+                print(f"[get_dataset_steps] Dataset not valid: {dataset_query}")
+                break
 
-        # Unpackage objects
-        file_summary, dataset_info = dataset_result
+            # Unpackage objects
+            file_summary, dataset_info = dataset_result
 
-        # Package dataset data
-        runs = das_get_runs(dataset=dataset_query)
-        next_datatier = datatiers[1:]
-        print(f"[get_dataset_steps] Dataset: {dataset} - Recursive case: Next datatiers to check: {next_datatier}")
-        item = {
-            'dataset': dataset_info["name"],
-            'campaign': campaign,
-            'type': dataset_info["status"],
-            'prepid': None,  # Taken using DAS
-            'runs': list(runs),
-            'events': file_summary["nevents"],  # Getting events from DAS and not Stats
-            'output': get_dataset_steps(dataset, datatiers[1:], year_dict),  # Caso recursivo
-            'workflow': None,  # Taken using DAS
-            'processing_string': processing_str
-        }
+            # Define the parent_dataset
+            parent_dataset = dataset_query
 
-        # Agregar el elemento
-        results.append(item)
+            # Package dataset data
+            runs = das_get_runs(dataset=dataset_query)
+            next_datatier = datatiers[1:]
+            print(f"[get_dataset_steps] Dataset: {dataset} - Recursive case: Next datatiers to check: {next_datatier}")
+            item = {
+                'dataset': dataset_info["name"],
+                'campaign': campaign,
+                'type': dataset_info["status"],
+                'prepid': None,  # Taken using DAS
+                'runs': list(runs),
+                'events': file_summary["nevents"],  # Getting events from DAS and not Stats
+                'output': get_dataset_steps(dataset, datatiers[1:], year_dict, parent_dataset=parent_dataset),  # Recursive case
+                'workflow': None,  # Taken using DAS
+                'processing_string': processing_str
+            }
+
+            # Agregar el elemento
+            results.append(item)
 
     return results
 
