@@ -450,6 +450,7 @@
                 item.rowspan = 1;
               }
             });
+
             for (let i = list.length - 1; i > 0; i--) {
               let thisEntry = list[i];
               let otherEntry = list[i - 1];
@@ -459,6 +460,48 @@
                 }
                 otherEntry[j].rowspan += thisEntry[j].rowspan;
                 thisEntry[j].rowspan = 0;
+              }
+            }
+
+            // Get the length per datatier
+            const getDatatier = (dataset) => {
+              let split = dataset.trim().split("/")
+              return split[split.length - 1]
+            }
+
+            let sDatatier = {}
+
+            const rawRowspan = list[0][0].rowspan;
+            for (let i = 0; i < list.length; i++) {
+              for (let j = 1; j < list[i].length; j++) {
+                let cell = list[i][j];
+                let cDatatier = getDatatier(cell.dataset);
+                let { length } = sDatatier[cDatatier] || { undefined };
+
+                // Get summary
+                if (!length) {
+                  sDatatier[cDatatier] = {
+                    length: 1
+                  }
+                }
+                else {
+                  sDatatier[cDatatier] = {
+                    length: length + 1
+                  }
+                }
+              }
+            }
+
+            // Fix rowspan
+            for (let i = 0; i < list.length; i++) {
+              for (let j = 1; j < list[i].length; j++) {
+                let cell = list[i][j];
+                let cDatatier = getDatatier(cell.dataset);
+                let { length } = sDatatier[cDatatier]
+                if (rawRowspan !== length) {
+                  let newRowspan = Math.ceil(rawRowspan / length);
+                  cell.rowspan = newRowspan;
+                }
               }
             }
           },
