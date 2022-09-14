@@ -463,43 +463,63 @@
               }
             }
 
+            // Following section will fix the rawspan for AOD, MiniAOD or NanoAOD rows which does not
+            // have the same number of elements than his datatier parent
+
             // Get the length per datatier
             const getDatatier = (dataset) => {
               let split = dataset.trim().split("/")
               return split[split.length - 1]
             }
 
+            // Get the length per datatier
+            const getDatasetId = (dataset) => {
+              // Dataset ID will be the first part of the dataset with the Run identifier
+              // For example: getDatasetId(/BTagMu/Run2022C-v1/RAW) => /BTagMu/Run2022C
+              let split = dataset.trim().split("/")
+              let runSplit = split[2].split("-")
+              return "/" + split[1] + "/" + runSplit[0]
+            }
+
+            // Object for saving the counts
+            // Due to RAW dataset is always one, we will use its number of elements in data array as reference for others rowspan
+            // If you check the last for-loop output, you will see the first RAW datatier cell having the proper rowspan and the others
+            // RAW rows with a rowspan of zero.
+
             let sDatatier = {}
 
-            const rawRowspan = list[0][0].rowspan;
             for (let i = 0; i < list.length; i++) {
-              for (let j = 1; j < list[i].length; j++) {
+              for (let j = 0; j < list[i].length; j++) {
                 let cell = list[i][j];
                 let cDatatier = getDatatier(cell.dataset);
-                let { length } = sDatatier[cDatatier] || { undefined };
+                let cId = getDatasetId(cell.dataset);
 
-                // Get summary
-                if (!length) {
-                  sDatatier[cDatatier] = {
-                    length: 1
+                // Save rowspan data
+                if (!sDatatier[cId]) {
+                  sDatatier[cId] = {
+                    [cDatatier]: 1
                   }
                 }
+                else if (!sDatatier[cId][cDatatier]) {
+                  sDatatier[cId][cDatatier] = 1
+                }
                 else {
-                  sDatatier[cDatatier] = {
-                    length: length + 1
-                  }
+                  sDatatier[cId][cDatatier] = sDatatier[cId][cDatatier] + 1
                 }
               }
             }
 
-            // Fix rowspan
+            // Fix rowspan using the summary
             for (let i = 0; i < list.length; i++) {
               for (let j = 1; j < list[i].length; j++) {
                 let cell = list[i][j];
+                let cId = getDatasetId(cell.dataset);
                 let cDatatier = getDatatier(cell.dataset);
-                let { length } = sDatatier[cDatatier]
-                if (rawRowspan !== length) {
-                  let newRowspan = Math.ceil(rawRowspan / length);
+
+                const refRowspan = sDatatier[cId]["RAW"]
+                const datatierLength = sDatatier[cId][cDatatier]
+                if (refRowspan !== datatierLength) {
+                  let newRowspan = Math.ceil(refRowspan / datatierLength);
                   cell.rowspan = newRowspan;
                 }
               }
