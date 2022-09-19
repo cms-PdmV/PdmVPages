@@ -580,11 +580,36 @@ def load_json(path: str) -> dict:
     return data
 
 
+def filter_output_datasets(results: list, subset: list):
+    """
+    Filter the result dataset only to keep a subset of datasets
+
+    Parameters
+    -----------------
+    results : List[dict]
+        A list with all RAW, AOD, MINIAOD and NANOAOD data for each available primary dataset
+        in DAS.
+    results : List[str]
+        A list with a primary dataset subset to filter. This list only includes RAW dataset names.
+
+
+    Returns
+    ------------------
+    List[dict]
+        Dataset list filtered
+    """
+    subset_result = []
+    for r in results:
+        if r["dataset"] in subset:
+            subset_result.append(r)
+    return subset_result
+
+
 # Load dataset names using file
-datasets = load_datasets_from_file(path="data/datasets.txt")
+datasets_subset = load_datasets_from_file(path="data/datasets.txt")
 
 # Load the names of the interest datasets
-# datasets = das_get_all_datasets_names_year(years=["2022"])
+datasets = das_get_all_datasets_names_year(years=["2022"])
 print('Read %s datasets from file' % (len(datasets)))
 
 if '--debug' in sys.argv:
@@ -597,16 +622,6 @@ print(f"RAW Datasets for year 2022: {datasets} \n")
 
 years = load_json("data/years.json")
 # print("Year JSON data: ", years)
-
-# TODO: Refactor to load exception of run from a JSON file
-exception_2016F_HIPM_runs = set([277932, 277934, 277981, 277991, 277992, 278017,
-                                 278018, 278167, 278175, 278193, 278239, 278240,
-                                 278273, 278274, 278288, 278289, 278290, 278308,
-                                 278309, 278310, 278315, 278345, 278346, 278349,
-                                 278366, 278406, 278509, 278761, 278770, 278806,
-                                 278807])
-exception_2016F_nonHIPM_runs = set([278769, 278801, 278802, 278803,
-                                    278804, 278805, 278808])
 
 for year, year_info in years.items():
     year_info['twiki_file'] = get_twiki_file(year_info['twiki_file_name'])
@@ -626,6 +641,12 @@ for index, raw_dataset in enumerate(datasets):
 
     results.append(get_dataset_info(raw_dataset))
 
+results_subset = filter_output_datasets(results=results, subset=datasets_subset)
+
 with open(f"{OUTPUT_FOLDER}/data.json", "w") as output_file:
     print("[Main] Saving JSON: ", results)
+    json.dump(results, output_file, indent=1, sort_keys=True)
+
+with open(f"{OUTPUT_FOLDER}/data_subset.json", "w") as output_file:
+    print("[Main] Saving Subset JSON: ", results_subset)
     json.dump(results, output_file, indent=1, sort_keys=True)
