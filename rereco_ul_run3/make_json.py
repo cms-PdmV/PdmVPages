@@ -649,4 +649,4 @@ with open(f"{OUTPUT_FOLDER}/data.json", "w") as output_file:
 
 with open(f"{OUTPUT_FOLDER}/data_subset.json", "w") as output_file:
     print("[Main] Saving Subset JSON: ", results_subset)
-    json.dump(results, output_file, indent=1, sort_keys=True)
+    json.dump(results_subset, output_file, indent=1, sort_keys=True)
