@@ -139,10 +139,8 @@
 /HeavyFlavor/Run2017G-v1/RAW
 /HighEGJet/Run2017F-v1/RAW
 /HighEGJet/Run2017G-v1/RAW
-/HighPtLowerPhotons/Run2017B-v1/RAW
 /HighPtLowerPhotons/Run2017C-v1/RAW
 /HighPtLowerPhotons/Run2017E-v1/RAW
-/HighPtPhoton30AndZ/Run2017B-v1/RAW
 /HighPtPhoton30AndZ/Run2017C-v1/RAW
 /HighPtPhoton30AndZ/Run2017E-v1/RAW
 /LowEGJet/Run2017F-v1/RAW
