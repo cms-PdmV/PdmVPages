@@ -321,9 +321,11 @@ def parse_inject_processing_string(
         Queries for retriving the datasets related with a specific processing string
     """
     token = [t for t in raw_dataset.split("/") if t]  # Split and delete empty strings
-    dataset = f"/{token[0]}/{token[1]}*{processing_str}*/{datatier}"
-    result = str(os.popen('dasgoclient --query="dataset=' + dataset + ' | grep dataset.name"').read().strip())
-    list_result = [x.strip() for x in result.split("\n")]
+    primary_dataset = token[0]
+    run_campaign = token[1].split("-")[0]
+    dataset = f"/{primary_dataset}/{run_campaign}*{processing_str}*/{datatier}"
+    result = os.popen('dasgoclient --query="dataset=' + dataset + ' | grep dataset.name"').read()
+    list_result = [x.strip() for x in result.split("\n") if x]
     return list_result
 
 
