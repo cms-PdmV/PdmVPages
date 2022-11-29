@@ -31,6 +31,9 @@ logger = logging.getLogger()
 run_regex = re.compile(r"Run([0-9]{4})")
 year_regex = re.compile(r"([0-9]{4})")
 
+# Dataset version
+dataset_version_regex = re.compile(r"(_v[0-9])?_v[0-9]|-v[0-9]")
+
 # Constant
 FILE_SUMMARY = "dbs3:filesummaries"
 DATASET_INFO = "dbs3:dataset_info"
@@ -367,6 +370,15 @@ def das_get_dataset_info(dataset: str):
     return None
 
 
+def get_dataset_version(dataset_name: str):
+    version = dataset_version_regex.search(dataset_name)
+    if version:
+        version_match = version[0]
+        version_str = version_match[version_match.index("v") + 1]
+        return int(version_str)
+    return 0
+
+
 def get_dataset_steps(dataset: str, datatiers: List[str], year_dict: dict, parent_dataset: str = None) -> dict:
     """
     For a RAW dataset, this function retrieves the all the datatiers and processing strings required
@@ -399,11 +411,21 @@ def get_dataset_steps(dataset: str, datatiers: List[str], year_dict: dict, paren
     for campaign, processing_str_list in datatier_campaigns.items():
         # Only use the lastest processing string from the config file
         processing_str = processing_str_list[-1]
+
         # Create the queries for retrieving datasets
         dataset_queries: List[str] = parse_inject_processing_string(
             raw_dataset=dataset, processing_str=processing_str,
             datatier=current_datatier
         )
+
+        # Filter queries, make sure they are related to the same version
+        if parent_dataset:
+            parent_dataset_version = get_dataset_version(parent_dataset)
+            dataset_queries = [
+                d
+                for d in dataset_queries
+                if get_dataset_version(d) == parent_dataset_version
+            ]
 
         # Iterate over all versions
         for dataset_query in dataset_queries:
