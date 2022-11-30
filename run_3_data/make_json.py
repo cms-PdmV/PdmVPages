@@ -31,6 +31,9 @@ logger = logging.getLogger()
 run_regex = re.compile(r"Run([0-9]{4})")
 year_regex = re.compile(r"([0-9]{4})")
 
+# Dataset version
+dataset_version_regex = re.compile(r"(_v[0-9])?_v[0-9]|-v[0-9]")
+
 # Constant
 FILE_SUMMARY = "dbs3:filesummaries"
 DATASET_INFO = "dbs3:dataset_info"
@@ -297,21 +300,14 @@ def parse_inject_processing_string(
         raw_dataset: str,
         processing_str: str,
         datatier: str,
-        parent_dataset: str = None,
-        versions: List[int] = [1]
 ) -> List[str]:
     """
-    TO FIX: Use wildcards to get the data of AOD, MINIAOD and NANOAOD
     Creates the query to retrieve the dataset for a given processing string
 
     Parameters
     -----------------
     raw_dataset : str
         Dataset name without any processing string, ex: /BTagMu/Run2018A-v1/RAW
-    parent_dataset: str = None
-        Parent dataset name, we will only use it to extract the version. We used this approach only
-        to get the correct version because when fetching datasets from DAS we can get different patterns of
-        processing strings.
     processing_str : str
         Processing string to include in the query
     datatier : str in (AOD, MINIAOD, NANOAOD)
@@ -327,26 +323,13 @@ def parse_inject_processing_string(
     List[str]
         Queries for retriving the datasets related with a specific processing string
     """
-    if datatier != "AOD" and parent_dataset:
-        token = [t for t in raw_dataset.split("/") if t]  # Split and delete empty strings
-        parent_tokens = [t for t in parent_dataset.split("/") if t]  # Split and delete empty strings for AOD dataset names
-        run_data_tokens = token[1].split("-")
-        parent_run_data_tokens = parent_tokens[1].split("-")
-        inj_pr_str = f"{run_data_tokens[0]}-{processing_str}-{parent_run_data_tokens[-1]}" # Use the correct version
-        return [f"/{token[0]}/{inj_pr_str}/{datatier}"]
-
-    # Only append multiple queries for the AOD datatier
-    if datatier == "AOD":
-        queries = []
-        for version in versions:
-            token = [t for t in raw_dataset.split("/") if t]  # Split and delete empty strings
-            run_data_tokens = token[1].split("-")
-            inj_pr_str = f"{run_data_tokens[0]}-{processing_str}-v{version}"
-            queries.append(f"/{token[0]}/{inj_pr_str}/{datatier}")
-        return queries
-
-    # This should not happen, for MINIAOD and NANOAOD parent dataset should be defined
-    raise Exception("Parent dataset in [get_dataset_steps] should be defined")
+    token = [t for t in raw_dataset.split("/") if t]  # Split and delete empty strings
+    primary_dataset = token[0]
+    run_campaign = token[1].split("-")[0]
+    dataset = f"/{primary_dataset}/{run_campaign}*{processing_str}*/{datatier}"
+    result = os.popen('dasgoclient --query="dataset=' + dataset + ' | grep dataset.name"').read()
+    list_result = [x.strip() for x in result.split("\n") if x]
+    return list_result
 
 
 def das_get_dataset_info(dataset: str):
@@ -387,9 +370,17 @@ def das_get_dataset_info(dataset: str):
     return None
 
 
+def get_dataset_version(dataset_name: str):
+    version = dataset_version_regex.search(dataset_name)
+    if version:
+        version_match = version[0]
+        version_str = version_match[version_match.index("v") + 1]
+        return int(version_str)
+    return 0
+
+
 def get_dataset_steps(dataset: str, datatiers: List[str], year_dict: dict, parent_dataset: str = None) -> dict:
     """
-    TO FIX: Use wildcards to get the data of AOD, MINIAOD and NANOAOD
     For a RAW dataset, this function retrieves the all the datatiers and processing strings required
 
     Parameters
@@ -420,12 +411,21 @@ def get_dataset_steps(dataset: str, datatiers: List[str], year_dict: dict, paren
     for campaign, processing_str_list in datatier_campaigns.items():
         # Only use the lastest processing string from the config file
         processing_str = processing_str_list[-1]
+
         # Create the queries for retrieving datasets
         dataset_queries: List[str] = parse_inject_processing_string(
             raw_dataset=dataset, processing_str=processing_str,
-            datatier=current_datatier, versions=list(range(1, 6)),
-            parent_dataset=parent_dataset
+            datatier=current_datatier
         )
+
+        # Filter queries, make sure they are related to the same version
+        if parent_dataset:
+            parent_dataset_version = get_dataset_version(parent_dataset)
+            dataset_queries = [
+                d
+                for d in dataset_queries
+                if get_dataset_version(d) == parent_dataset_version
+            ]
 
         # Iterate over all versions
         for dataset_query in dataset_queries:
