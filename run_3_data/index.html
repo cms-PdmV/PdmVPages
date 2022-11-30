@@ -507,7 +507,7 @@
                 const refRowspan = sDatatier[cId]["RAW"]
                 const datatierLength = sDatatier[cId][cDatatier]
                 if (refRowspan !== datatierLength) {
-                  let newRowspan = Math.ceil(refRowspan / datatierLength);
+                  let newRowspan = Math.floor(refRowspan / datatierLength);
                   cell.rowspan = newRowspan;
                 }
               }
