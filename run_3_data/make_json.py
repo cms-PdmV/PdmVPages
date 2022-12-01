@@ -329,6 +329,13 @@ def parse_inject_processing_string(
     dataset = f"/{primary_dataset}/{run_campaign}-{processing_str}*/{datatier}"
     result = os.popen('dasgoclient --query="dataset=' + dataset + ' | grep dataset.name"').read()
     list_result = [x.strip() for x in result.split("\n") if x]
+
+    # Filter "custom and not welcome" tags
+    final_filter = "(_v[0-9]-v[0-9]|-v[0-9])"
+    dataset_final_filter = f"/{primary_dataset}/{run_campaign}-{processing_str}{final_filter}"
+    dataset_final_regex = re.compile(dataset_final_filter)
+    list_result = [x for x in list_result if dataset_final_regex.search(x)]
+
     return list_result
 
 
