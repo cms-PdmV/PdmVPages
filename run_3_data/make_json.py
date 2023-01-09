@@ -386,7 +386,13 @@ def get_dataset_version(dataset_name: str):
     return 0
 
 
-def get_dataset_steps(dataset: str, datatiers: List[str], year_dict: dict, parent_dataset: str = None) -> dict:
+def get_dataset_steps(
+        dataset: str,
+        datatiers: List[str],
+        year_dict: dict,
+        parent_dataset: str = None,
+        parent_processing_str: str = None
+) -> dict:
     """
     For a RAW dataset, this function retrieves the all the datatiers and processing strings required
 
@@ -413,61 +419,75 @@ def get_dataset_steps(dataset: str, datatiers: List[str], year_dict: dict, paren
     current_datatier = datatiers[0]
     # Take all the subcampaings for a group
     datatier_campaigns = year_dict["campaigns"][current_datatier]
-
     results = []
+
     for campaign, processing_str_list in datatier_campaigns.items():
-        # Only use the lastest processing string from the config file
-        processing_str = processing_str_list[-1]
+        for processing_str in processing_str_list:
+            # Break recursion if parent processing string is different from the current
+            # We want to deep search for different processing strings only from AOD datatiers
+            if parent_processing_str:
+                if parent_processing_str != processing_str:
+                    print(f"[get_dataset_steps] Breaking recursion: Current datatier: {current_datatier}, Parent processing string: {parent_processing_str}, Current processing string: {processing_str}")
+                    break
 
-        # Create the queries for retrieving datasets
-        dataset_queries: List[str] = parse_inject_processing_string(
-            raw_dataset=dataset, processing_str=processing_str,
-            datatier=current_datatier
-        )
+            # Create the queries for retrieving datasets
+            dataset_queries: List[str] = parse_inject_processing_string(
+                raw_dataset=dataset, processing_str=processing_str,
+                datatier=current_datatier
+            )
 
-        # Filter queries, make sure they are related to the same version
-        if parent_dataset:
-            parent_dataset_version = get_dataset_version(parent_dataset)
-            dataset_queries = [
-                d
-                for d in dataset_queries
-                if get_dataset_version(d) == parent_dataset_version
-            ]
+            # Filter queries, make sure they are related to the same version
+            if parent_dataset:
+                parent_dataset_version = get_dataset_version(parent_dataset)
+                dataset_queries = [
+                    d
+                    for d in dataset_queries
+                    if get_dataset_version(d) == parent_dataset_version
+                ]
 
-        # Iterate over all versions
-        for dataset_query in dataset_queries:
-            print(f"[get_dataset_steps] Dataset for querying: {dataset_query}")
-            # Get dataset info
-            dataset_result = das_get_dataset_info(dataset=dataset_query)
-            if dataset_result is None:
-                # Dataset is not valid
-                print(f"[get_dataset_steps] Dataset not valid: {dataset_query}")
-                break
+            # Iterate over all versions
+            for dataset_query in dataset_queries:
+                print(f"[get_dataset_steps] Dataset for querying: {dataset_query}")
+                # Get dataset info
+                dataset_result = das_get_dataset_info(dataset=dataset_query)
+                if dataset_result is None:
+                    # Dataset is not valid
+                    print(f"[get_dataset_steps] Dataset not valid: {dataset_query}")
+                    break
 
-            # Unpackage objects
-            file_summary, dataset_info = dataset_result
+                # Unpackage objects
+                file_summary, dataset_info = dataset_result
 
-            # Define the parent_dataset
-            parent_dataset = dataset_query
+                # Define the parent_dataset
+                parent_dataset = dataset_query
 
-            # Package dataset data
-            runs = das_get_runs(dataset=dataset_query)
-            next_datatier = datatiers[1:]
-            print(f"[get_dataset_steps] Dataset: {dataset} - Recursive case: Next datatiers to check: {next_datatier}")
-            item = {
-                'dataset': dataset_info["name"],
-                'campaign': campaign,
-                'type': dataset_info["status"],
-                'prepid': None,  # Taken using DAS
-                'runs': list(runs),
-                'events': file_summary["nevents"],  # Getting events from DAS and not Stats
-                'output': get_dataset_steps(dataset, datatiers[1:], year_dict, parent_dataset=parent_dataset),  # Recursive case
-                'workflow': None,  # Taken using DAS
-                'processing_string': processing_str
-            }
+                # Define parent processing string for the next recursion step
+                parent_processing_str = processing_str
 
-            # Agregar el elemento
-            results.append(item)
+                # Package dataset data
+                runs = das_get_runs(dataset=dataset_query)
+                next_datatier = datatiers[1:]
+                print(f"[get_dataset_steps] Dataset: {dataset} - Recursive case: Next datatiers to check: {next_datatier}")
+                item = {
+                    'dataset': dataset_info["name"],
+                    'campaign': campaign,
+                    'type': dataset_info["status"],
+                    'prepid': None,  # Taken using DAS
+                    'runs': list(runs),
+                    'events': file_summary["nevents"],  # Getting events from DAS and not Stats
+                    'output': get_dataset_steps(
+                        dataset,
+                        datatiers[1:],
+                        year_dict,
+                        parent_dataset=parent_dataset,
+                        parent_processing_str=parent_processing_str
+                    ),  # Recursive case
+                    'workflow': None,  # Taken using DAS
+                    'processing_string': processing_str
+                }
+
+                # Agregar el elemento
+                results.append(item)
 
     return results
 

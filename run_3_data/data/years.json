@@ -5,17 +5,20 @@
     "campaigns": {
       "AOD": {
         "AOD": [
-          "PromptReco"
+          "PromptReco",
+          "10Dec2022"
         ]
       },
       "MINIAOD": {
         "MiniAODv3": [
-          "PromptReco"
+          "PromptReco",
+          "10Dec2022"
         ]
       },
       "NANOAOD": {
         "NanoAODv10": [
-          "PromptNanoAODv10"
+          "PromptNanoAODv10",
+          "10Dec2022"
         ]
       }
     }
