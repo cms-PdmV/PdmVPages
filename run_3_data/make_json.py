@@ -423,13 +423,6 @@ def get_dataset_steps(
 
     for campaign, processing_str_list in datatier_campaigns.items():
         for processing_str in processing_str_list:
-            # Break recursion if parent processing string is different from the current
-            # We want to deep search for different processing strings only from AOD datatiers
-            if parent_processing_str:
-                if parent_processing_str != processing_str:
-                    print(f"[get_dataset_steps] Breaking recursion: Current datatier: {current_datatier}, Parent processing string: {parent_processing_str}, Current processing string: {processing_str}")
-                    break
-
             # Create the queries for retrieving datasets
             dataset_queries: List[str] = parse_inject_processing_string(
                 raw_dataset=dataset, processing_str=processing_str,
