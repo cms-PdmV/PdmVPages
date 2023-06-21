@@ -1,26 +1,82 @@
 {
   "2022": {
-    "twiki_file_name": "",
-    "dcs_json_path": "",
-    "campaigns": {
+    "datatiers": {
       "AOD": {
-        "AOD": [
-          "PromptReco",
-          "10Dec2022"
+        "Run2022A": [
+          "16Jun2023"
+        ],
+        "Run2022B": [
+          "16Jun2023"
+        ],
+        "Run2022C": [
+          "16Jun2023"
+        ],
+        "Run2022D": [
+          "16Jun2023"
+        ],
+        "Run2022E": [
+          "16Jun2023"
+        ],
+        "Run2022F": [
+          "PromptReco"
+        ],
+        "Run2022G": [
+          "PromptReco"
         ]
       },
       "MINIAOD": {
-        "MiniAODv3": [
-          "PromptReco",
-          "10Dec2022"
-        ]
+        "MiniAODv3": {
+          "Run2022A": [
+            "16Jun2023"
+          ],
+          "Run2022B": [
+            "16Jun2023"
+          ],
+          "Run2022C": [
+            "16Jun2023"
+          ],
+          "Run2022D": [
+            "16Jun2023"
+          ],
+          "Run2022E": [
+            "16Jun2023"
+          ],
+          "Run2022F": [
+            "PromptReco"
+          ],
+          "Run2022G": [
+            "PromptReco"
+          ]
+        }
       },
       "NANOAOD": {
-        "NanoAODv10": [
-          "PromptNanoAODv10",
-          "10Dec2022"
-        ]
+        "NanoAODv11": {
+          "Run2022A": [
+            "PromptNanoAODv11"
+          ],
+          "Run2022B": [
+            "PromptNanoAODv11"
+          ],
+          "Run2022C": [
+            "PromptNanoAODv11"
+          ],
+          "Run2022D": [
+            "PromptNanoAODv11"
+          ],
+          "Run2022E": [
+            "PromptNanoAODv11"
+          ],
+          "Run2022F": [
+            "PromptNanoAODv11"
+          ],
+          "Run2022G": [
+            "PromptNanoAODv11"
+          ]
+        }
       }
     }
-  }
+  },
+  "2023": {},
+  "2024": {},
+  "2025": {}
 }
