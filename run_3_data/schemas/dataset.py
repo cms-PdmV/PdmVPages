@@ -1,8 +1,6 @@
 """
 This module models the schema required
-for each dataset type. Currently, it is required only
-to distinguish between two items: RAWDataset and ChildDataset which models
-the information required for datatiers AOD, MiniAOD and NanoAOD.
+for RAW datasets and for matching its sublevel (children) data tiers.
 """
 from typing import List, Optional
 
@@ -127,4 +125,66 @@ class RAWDataset:
             "runs": self.runs,
             "output": child_dataset,
             "twiki_runs": self.twiki_runs,
+        }
+
+
+class DatasetMatch:
+    """
+    Models the child dataset matched for a specific data tier and campaign
+
+    Attributes:
+        campaign (str): Campaign linked to a child dataset
+        processing_string (str): Processing string for the dataset
+        dataset (str): Child dataset name
+        data_tier (str): Dataset data tier
+        era (str): Dataset era
+    """
+    def __init__(self, campaign: str, processing_string: str, dataset: str, data_tier: str, era: str):
+        self.campaign = campaign
+        self.processing_string = processing_string
+        self.dataset = dataset
+        self.data_tier = data_tier
+        self.era = era
+    
+    @property
+    def dict(self) -> dict:
+        return {
+            "campaign": self.campaign,
+            "processing_string": self.processing_string,
+            "dataset": self.dataset,
+            "data_tier": self.data_tier,
+            "era": self.era
+        }
+    
+
+class EraDatasets:
+    """
+    Models the sublevel (children) datasets from a RAW dataset
+    for a specific era
+
+    Attributes:
+        era (str): Desired era
+        aod (DatasetMatch) | None: Matched dataset for AOD data tier,
+            If there is no VALID|PRODUCTION AOD dataset for this RAW dataset, this attribute
+            must be None
+        miniaod (DatasetMatch) | None: Matched dataset for MiniAOD data tier,
+            If there is no VALID|PRODUCTION MiniAOD dataset for this RAW dataset, this attribute
+            must be None
+        nanoaod (DatasetMatch) | None: Matched dataset for NanoAOD data tier
+            If there is no VALID|PRODUCTION NanoAOD dataset for this RAW dataset, this attribute
+            must be None
+    """
+    def __init__(self, era: str, aod: Optional[DatasetMatch], miniaod: Optional[DatasetMatch], nanoaod: Optional[DatasetMatch]):
+        self.era = era
+        self.aod = aod
+        self.miniaod = miniaod
+        self.nanoaod = nanoaod
+
+    @property
+    def dict(self) -> dict:
+        return {
+            "era": self.era,
+            "AOD": self.aod.dict,
+            "MINIAOD": self.miniaod.dict,
+            "NANOAOD": self.nanoaod.dict
         }

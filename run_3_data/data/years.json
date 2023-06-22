@@ -1,77 +1,102 @@
 {
   "2022": {
-    "datatiers": {
-      "AOD": {
-        "Run2022A": [
-          "16Jun2023"
-        ],
-        "Run2022B": [
-          "16Jun2023"
-        ],
-        "Run2022C": [
-          "16Jun2023"
-        ],
-        "Run2022D": [
-          "16Jun2023"
-        ],
-        "Run2022E": [
-          "16Jun2023"
-        ],
-        "Run2022F": [
-          "PromptReco"
-        ],
-        "Run2022G": [
-          "PromptReco"
-        ]
-      },
-      "MINIAOD": {
-        "MiniAODv3": {
-          "Run2022A": [
-            "16Jun2023"
-          ],
-          "Run2022B": [
-            "16Jun2023"
-          ],
-          "Run2022C": [
-            "16Jun2023"
-          ],
-          "Run2022D": [
-            "16Jun2023"
-          ],
-          "Run2022E": [
-            "16Jun2023"
-          ],
-          "Run2022F": [
-            "PromptReco"
-          ],
-          "Run2022G": [
-            "PromptReco"
-          ]
+    "era": {
+      "Run2022A": {
+        "AOD": {
+          "campaign": "AOD",
+          "processing_string": "16Jun2023"
+        },
+        "MINIAOD": {
+          "campaign": "MiniAODv3",
+          "processing_string": "16Jun2023"
+        },
+        "NANOAOD": {
+          "campaign": "NanoAODv11",
+          "processing_string": "PromptNanoAODv11"
         }
       },
-      "NANOAOD": {
-        "NanoAODv11": {
-          "Run2022A": [
-            "PromptNanoAODv11"
-          ],
-          "Run2022B": [
-            "PromptNanoAODv11"
-          ],
-          "Run2022C": [
-            "PromptNanoAODv11"
-          ],
-          "Run2022D": [
-            "PromptNanoAODv11"
-          ],
-          "Run2022E": [
-            "PromptNanoAODv11"
-          ],
-          "Run2022F": [
-            "PromptNanoAODv11"
-          ],
-          "Run2022G": [
-            "PromptNanoAODv11"
-          ]
+      "Run2022B": {
+        "AOD": {
+          "campaign": "AOD",
+          "processing_string": "16Jun2023"
+        },
+        "MINIAOD": {
+          "campaign": "MiniAODv3",
+          "processing_string": "16Jun2023"
+        },
+        "NANOAOD": {
+          "campaign": "NanoAODv11",
+          "processing_string": "PromptNanoAODv11"
+        }
+      },
+      "Run2022C": {
+        "AOD": {
+          "campaign": "AOD",
+          "processing_string": "16Jun2023"
+        },
+        "MINIAOD": {
+          "campaign": "MiniAODv3",
+          "processing_string": "16Jun2023"
+        },
+        "NANOAOD": {
+          "campaign": "NanoAODv11",
+          "processing_string": "PromptNanoAODv11"
+        }
+      },
+      "Run2022D": {
+        "AOD": {
+          "campaign": "AOD",
+          "processing_string": "16Jun2023"
+        },
+        "MINIAOD": {
+          "campaign": "MiniAODv3",
+          "processing_string": "16Jun2023"
+        },
+        "NANOAOD": {
+          "campaign": "NanoAODv11",
+          "processing_string": "PromptNanoAODv11"
+        }
+      },
+      "Run2022E": {
+        "AOD": {
+          "campaign": "AOD",
+          "processing_string": "16Jun2023"
+        },
+        "MINIAOD": {
+          "campaign": "MiniAODv3",
+          "processing_string": "16Jun2023"
+        },
+        "NANOAOD": {
+          "campaign": "NanoAODv11",
+          "processing_string": "PromptNanoAODv11"
+        }
+      },
+      "Run2022F": {
+        "AOD": {
+          "campaign": "AOD",
+          "processing_string": "PromptReco"
+        },
+        "MINIAOD": {
+          "campaign": "MiniAODv3",
+          "processing_string": "PromptReco"
+        },
+        "NANOAOD": {
+          "campaign": "NanoAODv11",
+          "processing_string": "PromptNanoAODv11"
+        }
+      },
+      "Run2022G": {
+        "AOD": {
+          "campaign": "AOD",
+          "processing_string": "PromptReco"
+        },
+        "MINIAOD": {
+          "campaign": "MiniAODv3",
+          "processing_string": "PromptReco"
+        },
+        "NANOAOD": {
+          "campaign": "NanoAODv11",
+          "processing_string": "PromptNanoAODv11"
         }
       }
     }
