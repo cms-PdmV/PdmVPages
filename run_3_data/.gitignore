@@ -6,3 +6,6 @@ sample/
 
 # Ignore PyCache
 __pycache__
+
+# Ignore output dataset
+output/

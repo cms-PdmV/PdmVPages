@@ -50,18 +50,6 @@
       .sorted-by {
         background: #c8c8c8;
       }
-      .orange-cell {
-        background: #ffb732;
-      }
-      .green-cell {
-        background: #bae0ce;
-      }
-      .light-green-cell {
-        background: #fce8b2;
-      }
-      .light-red-cell {
-        background: #f2c7c4;
-      }
       a {
         color: #005eb6;
       }
@@ -69,9 +57,9 @@
   </head>
   <body>
     <div id="app">
-      <h3 style="text-align: center; margin-top: 20px;">PdmV Run3 DATA <i style="color: red">full</i> table - Production</h3>
+      <h3 style="text-align: center; margin-top: 20px;">PdmV Run3 DATA - Production</h3>
       <div style="text-align:center;">
-        <a href="https://pdmv-pages.web.cern.ch/">PdmV pages</a> | <a href="../rereco_ul/full_table.html"><i style="color: purple">Run 2</i> table</a> | <a href="index.html">User table</a>
+        <a href="https://pdmv-pages.web.cern.ch/">PdmV pages</a> | <a href="../rereco_ul/full_table.html"><i style="color: purple">Run 2</i> table</a> | <a href="full_table.html"><i style="color: red">Full</i> table</a>
       </div>
       <div style="text-align: center; margin: 8px;">
         Campaigns:
@@ -343,7 +331,7 @@
           this.sortOrder = parseInt(urlParams.sort_order || 1);
 
           const component = this;
-          $.get( "output/data_full_table.json", function( data ) {
+          $.get( "output/data_full_original_table.json", function( data ) {
             data.forEach(element => {
               element.forEach(item => {
                 if (item.fraction) {
@@ -360,7 +348,7 @@
           }).fail(function(err) {
             alert("Error getting data: " + err.statusText);
           });
-          $.get( "output/original_table_timestamp.txt", function( data ) {
+          $.get( "output/full_original_table_timestamp.txt", function( data ) {
             component.lastUpdate = data;
           });
         },
@@ -519,7 +507,7 @@
                 const refRowspan = sDatatier[cId]["RAW"]
                 const datatierLength = sDatatier[cId][cDatatier]
                 if (refRowspan !== datatierLength) {
-                  let newRowspan = Math.ceil(refRowspan / datatierLength);
+                  let newRowspan = Math.floor(refRowspan / datatierLength);
                   cell.rowspan = newRowspan;
                 }
               }
