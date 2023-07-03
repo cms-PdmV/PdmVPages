@@ -51,7 +51,7 @@ def calculate_fractions(item, parent):
         calculate_fractions(output_item, item)
 
 
-with open(f'{OUTPUT_FOLDER}/data_subset.json', 'r') as data_file:
+with open(f'{OUTPUT_FOLDER}/data.json', 'r') as data_file:
     items = json.load(data_file)
 
 print('Read %s items from data.json' % (len(items)))
