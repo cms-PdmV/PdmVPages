@@ -4,11 +4,11 @@
       "Run2022A": {
         "AOD": {
           "campaign": "AOD",
-          "processing_string": "16Jun2023"
+          "processing_string": "27Jun2023"
         },
         "MINIAOD": {
           "campaign": "MiniAODv3",
-          "processing_string": "16Jun2023"
+          "processing_string": "27Jun2023"
         },
         "NANOAOD": {
           "campaign": "NanoAODv11",
@@ -18,11 +18,11 @@
       "Run2022B": {
         "AOD": {
           "campaign": "AOD",
-          "processing_string": "16Jun2023"
+          "processing_string": "27Jun2023"
         },
         "MINIAOD": {
           "campaign": "MiniAODv3",
-          "processing_string": "16Jun2023"
+          "processing_string": "27Jun2023"
         },
         "NANOAOD": {
           "campaign": "NanoAODv11",
@@ -32,11 +32,11 @@
       "Run2022C": {
         "AOD": {
           "campaign": "AOD",
-          "processing_string": "16Jun2023"
+          "processing_string": "27Jun2023"
         },
         "MINIAOD": {
           "campaign": "MiniAODv3",
-          "processing_string": "16Jun2023"
+          "processing_string": "27Jun2023"
         },
         "NANOAOD": {
           "campaign": "NanoAODv11",
@@ -46,11 +46,11 @@
       "Run2022D": {
         "AOD": {
           "campaign": "AOD",
-          "processing_string": "16Jun2023"
+          "processing_string": "27Jun2023"
         },
         "MINIAOD": {
           "campaign": "MiniAODv3",
-          "processing_string": "16Jun2023"
+          "processing_string": "27Jun2023"
         },
         "NANOAOD": {
           "campaign": "NanoAODv11",
@@ -60,11 +60,11 @@
       "Run2022E": {
         "AOD": {
           "campaign": "AOD",
-          "processing_string": "16Jun2023"
+          "processing_string": "27Jun2023"
         },
         "MINIAOD": {
           "campaign": "MiniAODv3",
-          "processing_string": "16Jun2023"
+          "processing_string": "27Jun2023"
         },
         "NANOAOD": {
           "campaign": "NanoAODv11",
