@@ -101,7 +101,36 @@
       }
     }
   },
-  "2023": {},
+  "2023": {
+    "Run2022C": {
+        "AOD": {
+          "campaign": "AOD",
+          "processing_string": "PromptReco"
+        },
+        "MINIAOD": {
+          "campaign": "MiniAODv3",
+          "processing_string": "PromptReco"
+        },
+        "NANOAOD": {
+          "campaign": "NanoAODv12",
+          "processing_string": "PromptNanoAODv12"
+        }
+      },
+      "Run2022D": {
+        "AOD": {
+          "campaign": "AOD",
+          "processing_string": "PromptReco"
+        },
+        "MINIAOD": {
+          "campaign": "MiniAODv3",
+          "processing_string": "PromptReco"
+        },
+        "NANOAOD": {
+          "campaign": "NanoAODv12",
+          "processing_string": "PromptReco"
+        }
+      }
+  },
   "2024": {},
   "2025": {}
 }
