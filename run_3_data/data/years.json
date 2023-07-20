@@ -103,7 +103,7 @@
   },
   "2023": {
     "era": {
-      "Run2022C": {
+      "Run2023C": {
         "AOD": {
           "campaign": "AOD",
           "processing_string": "PromptReco"
@@ -117,7 +117,7 @@
           "processing_string": "PromptNanoAODv12"
         }
       },
-      "Run2022D": {
+      "Run2023D": {
         "AOD": {
           "campaign": "AOD",
           "processing_string": "PromptReco"
