@@ -103,6 +103,34 @@
   },
   "2023": {
     "era": {
+     "Run2023A": {
+        "AOD": {
+          "campaign": "AOD",
+          "processing_string": "PromptReco"
+        },
+        "MINIAOD": {
+          "campaign": "MiniAODv3",
+          "processing_string": "PromptReco"
+        },
+        "NANOAOD": {
+          "campaign": "NanoAODv12",
+          "processing_string": "PromptReco"
+        }
+      },
+      "Run2023B": {
+        "AOD": {
+          "campaign": "AOD",
+          "processing_string": "PromptReco"
+        },
+        "MINIAOD": {
+          "campaign": "MiniAODv3",
+          "processing_string": "PromptReco"
+        },
+        "NANOAOD": {
+          "campaign": "NanoAODv12",
+          "processing_string": "PromptReco"
+        }
+      },
       "Run2023C": {
         "AOD": {
           "campaign": "AOD",
@@ -118,6 +146,20 @@
         }
       },
       "Run2023D": {
+        "AOD": {
+          "campaign": "AOD",
+          "processing_string": "PromptReco"
+        },
+        "MINIAOD": {
+          "campaign": "MiniAODv3",
+          "processing_string": "PromptReco"
+        },
+        "NANOAOD": {
+          "campaign": "NanoAODv12",
+          "processing_string": "PromptReco"
+        }
+      },
+      "Run2023E": {
         "AOD": {
           "campaign": "AOD",
           "processing_string": "PromptReco"

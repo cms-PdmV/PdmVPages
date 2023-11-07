@@ -51,211 +51,7 @@ def retrieve_latest_dataset(datasets: List[str], campaign: str, era: str) -> Dat
     return info
 
 
-def match_era_datasets(raw_dataset: str, era: str, era_data: dict, lax: bool = True) -> EraDatasets:
-    """
-    Queries the children datasets linked to a RAW datasets and filters
-    them to match only those specified in the desired era
-
-    Args:
-        raw_dataset (str): RAW dataset name
-        era (str): Desired era
-        era_match (dict): Contains the campaigns and processing string desired for each data tier
-        lax (bool): If the desired processing string is not available for a datatier,
-            this will include the most recent available dataset for the data tier
-
-    Returns:
-        EraDatasets: The group of dataset that matches the specified campaign
-            and processing string for each data tier
-    """
-
-    def __lax_warning_message__(original_ps: str, available_ps, datatier: str):
-        """
-        Record a warning message to alert the user the requested dataset was replaced
-        due to the lax condition
-        """
-        logger.warning(
-            (
-                "Using lax mode! "
-                "This relaxes the restrictions for retriving datasets using an exact "
-                "processing string. \n"
-                "It was not possible to retrieve a dataset for the processing string: %s \n"
-                "Instead, we are setting a dataset with the processing string: %s \n"
-                "Data tier: %s"
-            ), 
-            original_ps,
-            available_ps,
-            datatier
-        )
-
-
-    children_datasets: List[str] = das_get_datasets_names(query=f"child dataset='{raw_dataset}'")
-    
-    # INFO: Be aware, for some reason, NANOAOD datasets are not included into the children
-    # relationship. Query for them via an extra query: 
-    raw_primary_dataset, _, _ = das_retrieve_dataset_components(dataset=raw_dataset)
-    nanoaod_query: str = f"/{raw_primary_dataset}/{era}*/NANOAOD"
-    nanoaod_datasets: List[str] = das_get_datasets_names(query=f"dataset='{nanoaod_query}'")
-    children_datasets += nanoaod_datasets
-    children_datasets = sorted(children_datasets)
-    
-    # Group all children datasets per data tier and processing string
-    children_grouped = {}
-    for cd in children_datasets:
-        _, processing_string, data_tier = das_retrieve_dataset_components(dataset=cd)
-        if not children_grouped.get(data_tier):
-            children_grouped[data_tier] = {}
-        children_grouped[data_tier].update({processing_string: cd})
-
-    # Are AOD data sets available?
-    aod_found: dict = children_grouped.get("AOD")
-    aod_requested: dict = era_data.get("AOD")
-    aod_processing_string: str = aod_requested.get("processing_string")
-
-    if not aod_found:
-        # There is no dataset available for this data tier.
-        logger.error("There is no AOD data set available for the RAW data set: %s",
-            raw_dataset
-        )
-        return EraDatasets(
-            era=era,
-            aod=None,
-            miniaod=None,
-            nanoaod=None
-        )
-
-    if not aod_found.get(aod_processing_string):
-        if not lax:
-            # There is no dataset available for this processing string and data tier.
-            logger.error("There is no AOD data set available for the RAW data set: %s and the processing string: %s",
-                raw_dataset, aod_processing_string
-            )
-            return EraDatasets(
-                era=era,
-                aod=None,
-                miniaod=None,
-                nanoaod=None
-            )
-        else:
-            # Choose the most recent dataset available for the category
-            aod_dataset_names: List[str] = aod_found.values()
-            aod_info: DatasetMatch = retrieve_latest_dataset(
-                datasets=aod_dataset_names,
-                campaign=aod_requested.get("campaign"),
-                era=era
-            )
-            __lax_warning_message__(aod_processing_string, aod_info.processing_string, aod_info.data_tier)
-    else:
-        aod_info: DatasetMatch = DatasetMatch(
-            campaign=aod_requested.get("campaign"),
-            processing_string=aod_processing_string,
-            dataset=aod_found.get(aod_processing_string),
-            data_tier="AOD",
-            era=era
-        )
-
-    # Are MiniAOD data sets available?
-    miniaod_found: dict = children_grouped.get("MINIAOD")
-    miniaod_requested: dict = era_data.get("MINIAOD")
-    miniaod_processing_string: str = miniaod_requested.get("processing_string")
-
-    if not miniaod_found:
-        # There is no dataset available for this data tier.
-        logger.error("There is no MiniAOD data set available for the RAW data set: %s",
-            raw_dataset
-        )
-        return EraDatasets(
-            era=era,
-            aod=aod_info,
-            miniaod=None,
-            nanoaod=None
-        )
-
-    if not miniaod_found.get(miniaod_processing_string):
-        if not lax:
-            # There is no dataset available for this processing string and data tier.
-            logger.error("There is no MiniAOD data set available for the RAW data set: %s and the processing string: %s",
-                raw_dataset, miniaod_processing_string
-            )
-            return EraDatasets(
-                era=era,
-                aod=aod_info,
-                miniaod=None,
-                nanoaod=None
-            )
-        else:
-            # Choose the most recent dataset available for the category
-            miniaod_dataset_names: List[str] = miniaod_found.values()
-            miniaod_info: DatasetMatch = retrieve_latest_dataset(
-                datasets=miniaod_dataset_names,
-                campaign=miniaod_requested.get("campaign"),
-                era=era
-            )
-            __lax_warning_message__(miniaod_processing_string, miniaod_info.processing_string, miniaod_info.data_tier)
-    else:
-        miniaod_info: DatasetMatch = DatasetMatch(
-            campaign=miniaod_requested.get("campaign"),
-            processing_string=miniaod_processing_string,
-            dataset=miniaod_found.get(miniaod_processing_string),
-            data_tier="MINIAOD",
-            era=era
-        )
-
-    # Are NanoAOD data sets available?
-    nanoaod_found: dict = children_grouped.get("NANOAOD")
-    nanoaod_requested: dict = era_data.get("NANOAOD")
-    nanoaod_processing_string: str = nanoaod_requested.get("processing_string")
-
-    if not nanoaod_found:
-        # There is no dataset available for this data tier.
-        logger.error("There is no NanoAOD data set available for the RAW data set: %s",
-            raw_dataset
-        )
-        return EraDatasets(
-            era=era,
-            aod=aod_info,
-            miniaod=miniaod_info,
-            nanoaod=None
-        )
-
-    if not nanoaod_found.get(nanoaod_processing_string):
-        if not lax:
-            # There is no dataset available for this processing string and data tier.
-            logger.error("There is no NanoAOD data set available for the RAW data set: %s and the processing string: %s",
-                raw_dataset, nanoaod_processing_string
-            )
-            return EraDatasets(
-                era=era,
-                aod=aod_info,
-                miniaod=miniaod_info,
-                nanoaod=None
-            )
-        else:
-            # Choose the most recent dataset available for the category
-            nanoaod_dataset_names: List[str] = nanoaod_found.values()
-            nanoaod_info: DatasetMatch = retrieve_latest_dataset(
-                datasets=nanoaod_dataset_names,
-                campaign=nanoaod_requested.get("campaign"),
-                era=era
-            )
-            __lax_warning_message__(nanoaod_processing_string, nanoaod_info.processing_string, nanoaod_info.data_tier)
-    else:
-        nanoaod_info: DatasetMatch = DatasetMatch(
-            campaign=nanoaod_requested.get("campaign"),
-            processing_string=nanoaod_processing_string,
-            dataset=nanoaod_found.get(nanoaod_processing_string),
-            data_tier="NANOAOD",
-            era=era
-        )
-
-    return EraDatasets(
-        era=era,
-        aod=aod_info,
-        miniaod=miniaod_info,
-        nanoaod=nanoaod_info,
-    )
-
-
-def __retrieve_dataset_info__(dataset_requested: DatasetMatch) -> ChildDataset:
+def __retrieve_dataset_info(dataset_requested: DatasetMatch) -> Optional[ChildDataset]:
     """
     Retrives the dataset information from DAS for a desired dataset and parses it
     into the required format to display this information into both tables.
@@ -265,8 +61,13 @@ def __retrieve_dataset_info__(dataset_requested: DatasetMatch) -> ChildDataset:
 
     Returns:
         ChildDataset: Dataset information parsed into the required format
+        None: If the status for the requested dataset is not ("PRODUCTION", "VALID")
     """
-    summary, info = das_get_dataset_info(dataset=dataset_requested.dataset)
+    dataset_info = das_get_dataset_info(dataset=dataset_requested.dataset)
+    if not dataset_info:
+        return None
+    
+    summary, info = dataset_info
     events: int = summary.get("nevents", -2)
     runs: List[int] = das_get_runs(dataset=dataset_requested.dataset)
     type: str = info.get("status", "ERROR")
@@ -283,34 +84,138 @@ def __retrieve_dataset_info__(dataset_requested: DatasetMatch) -> ChildDataset:
     )
 
 
-
-def retrieve_children_datasets(children_datasets: EraDatasets) -> Optional[ChildDataset]:
+def __build_relationship(
+        era: str,
+        era_data: dict,
+        processing_string: str,
+        group: dict
+    ) -> Optional[ChildDataset]:
     """
-    Retrieves the data related to the sublevel (children) data tiers linked for a RAW dataset
-    and sets the hierarchical relationship between data tiers.
+    From a dictionary containing the data set names grouped per data tier,
+    build the children dataset chain to include in the RAW dataset.
 
     Args:
-        children_datasets (EraDatasets): The sublevel datasets to retrieve for each data tier
+        era (str): Dataset era being processed.
+        era_data (dict): Relation between the PdmV campaign and the processing string
+            compared.
+        processing_string (str): Processing string for the data sets being grouped.
+        group (dict): Data set names grouped by data tier. The structure is the following:
+            {<data tier>: <dataset name>}, e.g: 
+            {'DQMIO': '/BTagMu/CMSSW_12_4_11-124X_dataRun3_v11_gtval_RelVal_2022C-v1/DQMIO'}
+    Returns:
+        ChildDataset: Object that groups the relationship for the given datasets.
+        None: If the given group doesn't contain the AOD datatiers.
+    """
+    def __retrieve_dataset_match(data_tier: str, dataset: str) -> DatasetMatch:
+        """
+        Build the match data object to retrieve the information.
+        """
+        requested: dict = era_data.get(data_tier, {})
+        campaign: str = requested.get(
+            "campaign", 
+            f"<CampaignNotAvailableFor:{era}-{processing_string}>"
+        )
+        return DatasetMatch(
+            campaign=campaign,
+            processing_string=processing_string,
+            dataset=dataset,
+            data_tier=data_tier,
+            era=era
+        )
+
+
+    # Check if the required datasets are included.
+    REQUIRED_DATATIERS: set[str] = {'AOD'}
+    if not REQUIRED_DATATIERS.intersection(group):
+        logger.debug(
+            (
+                "Grouped datasets for processing string (%s) "
+                "doesn't include the required data tiers: %s"
+            ),
+            processing_string,
+            REQUIRED_DATATIERS
+        )
+        return None
+
+    # Retrieve the data for the desired data tiers.
+    children_relation: List[ChildDataset] = []
+    retrieval_order: tuple = ("AOD", "MINIAOD", "NANOAOD")
+    for data_tier in retrieval_order:
+        dataset_name: Optional[str] = group.get(data_tier, "")
+        if not dataset_name:
+            break
+
+        # Retrieve the data
+        dataset_match: DatasetMatch = __retrieve_dataset_match(
+            data_tier=data_tier,
+            dataset=dataset_name
+        )
+        dataset_info: ChildDataset = __retrieve_dataset_info(dataset_requested=dataset_match)
+        if dataset_info:
+            children_relation.append(dataset_info)
+
+    # Build the hierarchy
+    if children_relation:
+        first_child: ChildDataset = children_relation[0]
+        current_child: ChildDataset = first_child
+        for idx in range(1, len(children_relation)):
+            children = children_relation[idx]
+            current_child.output = [children]
+            current_child = children
+        
+        return first_child
+
+    return None
+
+
+def match_era_datasets(
+        raw_dataset: str,
+        era: str,
+        era_data: dict,
+    ) -> List[ChildDataset]:
+    """
+    Queries the children datasets linked to a RAW datasets and filters
+    them to match only those specified in the desired era
+
+    Args:
+        raw_dataset (str): RAW dataset name
+        era (str): Desired era
+        era_match (dict): Contains the campaigns and processing string desired for each data tier
 
     Returns:
-        ChildDataset | None: The AOD dataset information linked to a RAW dataset containing
-            data for the MINIAOD and NANOAOD datasets associated with it.
-            None if there no AOD dataset yet for this RAW dataset
+        List[ChildDataset]: A list with all the children datasets for the
+            given RAW dataset grouped by data tier.
     """
-    # Retrieve the dataset info for each data tier
-    aod_info: Optional[ChildDataset] = __retrieve_dataset_info__(dataset_requested=children_datasets.aod) if children_datasets.aod else None
-    miniaod_info: Optional[ChildDataset] = __retrieve_dataset_info__(dataset_requested=children_datasets.miniaod) if children_datasets.miniaod else None
-    nanoaod_info: Optional[ChildDataset] = __retrieve_dataset_info__(dataset_requested=children_datasets.nanoaod) if children_datasets.nanoaod else None
+    children_datasets: List[str] = das_get_datasets_names(query=f"child dataset='{raw_dataset}'")
+    
+    # INFO: Beware, for some reason, NANOAOD datasets are not included into the children
+    # relationship. Query for them via an extra query: 
+    raw_primary_dataset, _, _ = das_retrieve_dataset_components(dataset=raw_dataset)
+    nanoaod_query: str = f"/{raw_primary_dataset}/{era}*/NANOAOD"
+    nanoaod_datasets: List[str] = das_get_datasets_names(query=f"dataset='{nanoaod_query}'")
+    children_datasets += nanoaod_datasets
+    children_datasets = sorted(children_datasets)
 
-    # Set the hierarchical order
-    if miniaod_info and nanoaod_info:
-        miniaod_info.output = [nanoaod_info]
-        aod_info.output = [miniaod_info]
-        return aod_info
-    elif aod_info and miniaod_info:
-        aod_info.output = [miniaod_info]
-        return aod_info
-    return aod_info
+    # Group all children datasets per data tier and processing string
+    children_grouped = {}
+    for cd in children_datasets:
+        _, processing_string, data_tier = das_retrieve_dataset_components(dataset=cd)
+        if not children_grouped.get(processing_string):
+            children_grouped[processing_string] = {}
+        children_grouped[processing_string].update({data_tier: cd})
+
+    children_per_processing: List[ChildDataset] = []
+    for processing_str, grouped_data_tier in children_grouped.items():
+        children_relation: Optional[ChildDataset] = __build_relationship(
+            era=era,
+            era_data=era_data,
+            processing_string=processing_str,
+            group=grouped_data_tier
+        )
+        if children_relation:
+            children_per_processing.append(children_relation)
+
+    return children_per_processing
 
 
 def get_dataset_info(dataset: str, year_info: dict) -> dict:
@@ -353,10 +258,9 @@ def get_dataset_info(dataset: str, year_info: dict) -> dict:
     if era_data:
         # Retrieve the sublevel datasets
         logger.info("Querying for the sublevel datasets for RAW dataset: %s" % dataset)
-        interest_children_datasets: EraDatasets = match_era_datasets(raw_dataset=dataset, era=era, era_data=era_data)
-        raw_children_datasets: ChildDataset = retrieve_children_datasets(children_datasets=interest_children_datasets)
-        if raw_children_datasets:
-            raw_dataset.output = [raw_children_datasets]
+        interest_children_datasets: List[ChildDataset] = match_era_datasets(raw_dataset=dataset, era=era, era_data=era_data)
+        if interest_children_datasets:
+            raw_dataset.output = interest_children_datasets
         else:
             logger.error("No child datasets for RAW dataset: %s", dataset)
     else:

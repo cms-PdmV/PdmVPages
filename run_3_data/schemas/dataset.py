@@ -3,7 +3,7 @@ This module models the schema required
 for RAW datasets and for matching its sublevel (children) data tiers.
 """
 from typing import List, Optional
-
+import pprint
 
 class ChildDataset:
     """
@@ -80,6 +80,14 @@ class ChildDataset:
             "workflow": self.workflow,
             "output": child_dataset,
         }
+
+    def __repr__(self) -> str:
+        return pprint.pformat(
+            self.dict,
+            width=100,
+            compact=True,
+            depth=100
+        )
 
 
 class RAWDataset:
