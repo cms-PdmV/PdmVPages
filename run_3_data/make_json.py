@@ -4,6 +4,8 @@ import os
 import random
 import re
 import logging
+import datetime
+import concurrent.futures
 from typing import List
 from utils.file import *
 from utils.das import *
@@ -12,7 +14,9 @@ from schemas.dataset import *
 
 # Logger
 # Set up logging
-logging.basicConfig(format='[%(asctime)s][%(levelname)s] %(message)s', level=logging.INFO)
+logging.basicConfig(
+    format="[%(asctime)s][%(levelname)s] %(message)s", level=logging.INFO
+)
 logger = logging.getLogger()
 
 # Regex pattern for year
@@ -23,156 +27,89 @@ year_regex = re.compile(r"([0-9]{4})")
 OUTPUT_FOLDER = f"{os.getcwd()}/output"
 
 
-def retrieve_latest_dataset(datasets: List[str], campaign: str, era: str) -> DatasetMatch:
+def __retrieve_dataset_info(dataset: DatasetMetadata) -> Optional[ChildDataset]:
     """
-    From a list of datasets, retrieve the latest data set information
-    using as criterion the last modification date
+    Retrieve the dataset information for a given dataset name
 
     Args:
-        datasets (list[str]): List of datasets to filter
-        campaign (str): Campaign to set to the latest dataset
-        era (str): Era to set to the latest dataset
-
-    Returns:
-        DatasetMatch: Dataset information
-    """
-    # Choose the most recent dataset available for the category
-    _, latest_dataset = das_retrieve_latest_dataset(datasets=datasets)
-    summary, _ = latest_dataset
-    name: str = summary.get("name")
-    _, processing_string, data_tier = das_retrieve_dataset_components(dataset=name)
-    info: DatasetMatch = DatasetMatch(
-        campaign=campaign,
-        processing_string=processing_string,
-        dataset=name,
-        data_tier=data_tier,
-        era=era
-    )
-    return info
-
-
-def __retrieve_dataset_info(dataset_requested: DatasetMatch) -> Optional[ChildDataset]:
-    """
-    Retrives the dataset information from DAS for a desired dataset and parses it
-    into the required format to display this information into both tables.
-
-    Args:
-        dataset_requested (DatasetMatch): Dataset to query
-
+        dataset (DatasetMetadata): Dataset metadata
+    
     Returns:
         ChildDataset: Dataset information parsed into the required format
         None: If the status for the requested dataset is not ("PRODUCTION", "VALID")
     """
-    dataset_info = das_get_dataset_info(dataset=dataset_requested.dataset)
-    if not dataset_info:
+    dataset_info = das_get_dataset_info(dataset=dataset.full_name)
+    if not dataset.valid or not dataset_info:
         return None
     
     summary, info = dataset_info
     events: int = summary.get("nevents", -2)
-    runs: List[int] = das_get_runs(dataset=dataset_requested.dataset)
-    type: str = info.get("status", "ERROR")
+    runs: List[int] = das_get_runs(dataset=dataset.full_name)
+    dataset_type: str = info.get("status", "ERROR")
 
     return ChildDataset(
-        dataset=dataset_requested.dataset,
+        dataset=dataset.full_name,
         events=events,
         runs=runs,
-        type=type,
-        campaign=dataset_requested.campaign,
-        processing_string=dataset_requested.processing_string,
-        datatier=dataset_requested.data_tier,
-        era=dataset_requested.era
+        type=dataset_type,
+        campaign="<other>",
+        processing_string=dataset.processing_string,
+        datatier=dataset.datatier,
+        era="<other>",
     )
 
 
-def __build_relationship(
-        era: str,
-        era_data: dict,
-        processing_string: str,
-        group: dict
-    ) -> Optional[ChildDataset]:
+def build_relationship(
+    dataset: DatasetMetadata, remaining_data_tiers: List[str]
+) -> Optional[ChildDataset]:
     """
-    From a dictionary containing the data set names grouped per data tier,
-    build the children dataset chain to include in the RAW dataset.
+    Performs an in-depth search, recursively looking for the
+    children datasets for a given one.
 
     Args:
-        era (str): Dataset era being processed.
-        era_data (dict): Relation between the PdmV campaign and the processing string
-            compared.
-        processing_string (str): Processing string for the data sets being grouped.
-        group (dict): Data set names grouped by data tier. The structure is the following:
-            {<data tier>: <dataset name>}, e.g: 
-            {'DQMIO': '/BTagMu/CMSSW_12_4_11-124X_dataRun3_v11_gtval_RelVal_2022C-v1/DQMIO'}
+        dataset (DatasetMetadata): Dataset to retrieve its children.
+        remaining_data_tiers (list[str]): Data tiers remaining
+            to scan.
     Returns:
-        ChildDataset: Object that groups the relationship for the given datasets.
-        None: If the given group doesn't contain the AOD datatiers.
+        ChildDataset: Requested dataset with all its children.
     """
-    def __retrieve_dataset_match(data_tier: str, dataset: str) -> DatasetMatch:
-        """
-        Build the match data object to retrieve the information.
-        """
-        requested: dict = era_data.get(data_tier, {})
-        campaign: str = requested.get(
-            "campaign", 
-            f"<CampaignNotAvailableFor:{era}-{processing_string}>"
+    # Base case: There are not remaining data tiers to check
+    # or there are no children for the current dataset.
+    base_case_reached: bool = False
+    if not remaining_data_tiers:
+        base_case_reached = True
+
+    # Explore in-depth
+    children_datasets: List[ChildDataset] = []
+    if not base_case_reached:
+        inmediate_next: str = remaining_data_tiers[0]
+        inmediate_children: List[DatasetMetadata] = das_scan_children(
+            dataset=dataset, next_tier=inmediate_next
         )
-        return DatasetMatch(
-            campaign=campaign,
-            processing_string=processing_string,
-            dataset=dataset,
-            data_tier=data_tier,
-            era=era
-        )
+        # Recursive case: Search in-depth for the children
+        for cd in inmediate_children:
+            if cd.valid:
+                children: Optional[ChildDataset] = build_relationship(
+                    dataset=cd,
+                    remaining_data_tiers=remaining_data_tiers[1:]
+                )
+                if children:
+                    children_datasets.append(children)
 
-
-    # Check if the required datasets are included.
-    REQUIRED_DATATIERS: set[str] = {'AOD'}
-    if not REQUIRED_DATATIERS.intersection(group):
-        logger.debug(
-            (
-                "Grouped datasets for processing string (%s) "
-                "doesn't include the required data tiers: %s"
-            ),
-            processing_string,
-            REQUIRED_DATATIERS
-        )
-        return None
-
-    # Retrieve the data for the desired data tiers.
-    children_relation: List[ChildDataset] = []
-    retrieval_order: tuple = ("AOD", "MINIAOD", "NANOAOD")
-    for data_tier in retrieval_order:
-        dataset_name: Optional[str] = group.get(data_tier, "")
-        if not dataset_name:
-            break
-
-        # Retrieve the data
-        dataset_match: DatasetMatch = __retrieve_dataset_match(
-            data_tier=data_tier,
-            dataset=dataset_name
-        )
-        dataset_info: ChildDataset = __retrieve_dataset_info(dataset_requested=dataset_match)
-        if dataset_info:
-            children_relation.append(dataset_info)
-
-    # Build the hierarchy
-    if children_relation:
-        first_child: ChildDataset = children_relation[0]
-        current_child: ChildDataset = first_child
-        for idx in range(1, len(children_relation)):
-            children = children_relation[idx]
-            current_child.output = [children]
-            current_child = children
-        
-        return first_child
-
-    return None
+    # For the base case, retrieve the dataset information
+    # and parse the hierarchy
+    dataset: Optional[ChildDataset] = __retrieve_dataset_info(dataset=dataset)
+    if dataset:
+        dataset.output = children_datasets
+    
+    return dataset
 
 
 def match_era_datasets(
-        raw_dataset: str,
-        era: str,
-        era_data: dict,
-    ) -> List[ChildDataset]:
+    raw_dataset: str,
+    era: str,
+    era_data: dict,
+) -> List[ChildDataset]:
     """
     Queries the children datasets linked to a RAW datasets and filters
     them to match only those specified in the desired era
@@ -186,36 +123,12 @@ def match_era_datasets(
         List[ChildDataset]: A list with all the children datasets for the
             given RAW dataset grouped by data tier.
     """
-    children_datasets: List[str] = das_get_datasets_names(query=f"child dataset='{raw_dataset}'")
-    
-    # INFO: Beware, for some reason, NANOAOD datasets are not included into the children
-    # relationship. Query for them via an extra query: 
-    raw_primary_dataset, _, _ = das_retrieve_dataset_components(dataset=raw_dataset)
-    nanoaod_query: str = f"/{raw_primary_dataset}/{era}*/NANOAOD"
-    nanoaod_datasets: List[str] = das_get_datasets_names(query=f"dataset='{nanoaod_query}'")
-    children_datasets += nanoaod_datasets
-    children_datasets = sorted(children_datasets)
-
-    # Group all children datasets per data tier and processing string
-    children_grouped = {}
-    for cd in children_datasets:
-        _, processing_string, data_tier = das_retrieve_dataset_components(dataset=cd)
-        if not children_grouped.get(processing_string):
-            children_grouped[processing_string] = {}
-        children_grouped[processing_string].update({data_tier: cd})
-
-    children_per_processing: List[ChildDataset] = []
-    for processing_str, grouped_data_tier in children_grouped.items():
-        children_relation: Optional[ChildDataset] = __build_relationship(
-            era=era,
-            era_data=era_data,
-            processing_string=processing_str,
-            group=grouped_data_tier
-        )
-        if children_relation:
-            children_per_processing.append(children_relation)
-
-    return children_per_processing
+    DESIRED_DATA_TIERS: List[str] = ["AOD", "MINIAOD", "NANOAOD"]
+    childrens: Optional[ChildDataset] = build_relationship(
+        dataset=DatasetMetadata(name=raw_dataset),
+        remaining_data_tiers=DESIRED_DATA_TIERS
+    )
+    return childrens.output if childrens else []
 
 
 def get_dataset_info(dataset: str, year_info: dict) -> dict:
@@ -235,7 +148,10 @@ def get_dataset_info(dataset: str, year_info: dict) -> dict:
     """
     dataset_content: Optional[Tuple[dict, dict]] = das_get_dataset_info(dataset=dataset)
     if not dataset_content:
-        logger.error("The requested dataset, %s, does not exist or its status is not valid or production", dataset)
+        logger.error(
+            "The requested dataset, %s, does not exist or its status is not valid or production",
+            dataset,
+        )
         return None
 
     dataset_summary, _ = dataset_content
@@ -247,10 +163,7 @@ def get_dataset_info(dataset: str, year_info: dict) -> dict:
     year = year_regex.search(string=era)[0]
 
     raw_dataset: RAWDataset = RAWDataset(
-        dataset=dataset,
-        events=events,
-        year=year,
-        runs=runs
+        dataset=dataset, events=events, year=year, runs=runs
     )
 
     # Retrieve the desired datasets for the era
@@ -258,45 +171,83 @@ def get_dataset_info(dataset: str, year_info: dict) -> dict:
     if era_data:
         # Retrieve the sublevel datasets
         logger.info("Querying for the sublevel datasets for RAW dataset: %s" % dataset)
-        interest_children_datasets: List[ChildDataset] = match_era_datasets(raw_dataset=dataset, era=era, era_data=era_data)
+        interest_children_datasets: List[ChildDataset] = match_era_datasets(
+            raw_dataset=dataset, era=era, era_data=era_data
+        )
         if interest_children_datasets:
             raw_dataset.output = interest_children_datasets
         else:
             logger.error("No child datasets for RAW dataset: %s", dataset)
     else:
-        logger.error("Unable to query the children data tier for RAW dataset: %s", dataset)
-    
+        logger.error(
+            "Unable to query the children data tier for RAW dataset: %s", dataset
+        )
+
     return raw_dataset.dict
 
 
 # Load dataset names using file
+start_time = datetime.datetime.now()
 datasets = load_datasets_from_file(path="data/datasets.txt")
-logger.info('Read %s datasets from file', len(datasets))
+logger.info("Read %s datasets from file", len(datasets))
 
-if '--debug' in sys.argv:
+if "--debug" in sys.argv:
     random.shuffle(datasets)
     datasets = datasets[:10]
-    logger.debug('Picking random %s datasets because debug', len(datasets))
+    logger.debug("Picking random %s datasets because debug", len(datasets))
 
 datasets = sorted(datasets)
 with open("data/years.json", "r", encoding="utf-8") as file:
     years = json.load(file)
 
 
+MAX_EXECUTORS = 25
+BREAKER = len(datasets)
 results = []
-breaker = 0
+dataset_args = []
+
+# Retrieve the dataset name and its year
 for index, raw_dataset in enumerate(datasets):
-    print('%s/%s. Dataset is %s' % (index + 1, len(datasets), raw_dataset))
+    if index == BREAKER:
+        break
     for year, year_info in years.items():
-        if '/Run%s' % (year) in raw_dataset:
-            raw_dataset_data = get_dataset_info(dataset=raw_dataset, year_info=year_info.get("era"))
-            if raw_dataset_data:
-                results.append(raw_dataset_data)        
+        if "/Run%s" % (year) in raw_dataset:
+            dataset_year = (raw_dataset, year_info.get("era"))
+            dataset_args.append(dataset_year)
             break
     else:
-        logger.error('***Could not find year info for %s ***', raw_dataset)
+        logger.error("***Could not find year info for %s ***", raw_dataset)
         continue
 
+# Use a concurrent execution to retrieve the data
+logger.info("Scannning %d datasets", len(dataset_args))
+with concurrent.futures.ThreadPoolExecutor(max_workers=MAX_EXECUTORS) as executor:
+    future_result = {
+        executor.submit(get_dataset_info, *dataset_args): dataset_args[0]
+        for dataset_args in dataset_args
+    }
+    for future in concurrent.futures.as_completed(future_result):
+        raw_dataset = future_result[future]
+        logger.info("Data retrieved for RAW dataset: %s", raw_dataset)
+        try:
+            data = future.result()
+            results.append(data)
+            logger.info("Datasets processed: %d/%d", len(results), len(dataset_args))
+        except Exception as exc:
+            logger.error(
+                "Error processing RAW dataset: %s",
+                raw_dataset,
+                exc_info=True,
+            )
 
+missing = len(dataset_args) - len(results)
+logger.warning("Missing data for %s datasets", missing)
+logger.info("Storing data")
 with open(f"{OUTPUT_FOLDER}/data.json", "w") as output_file:
     json.dump(results, output_file, indent=1, sort_keys=True)
+
+end_time = datetime.datetime.now()
+elapsed = end_time - start_time
+rate = round(elapsed.total_seconds() / len(results), 2)
+logger.info("Elapsed time: %s", end_time - start_time)
+logger.info("Rate: %s s/dataset", rate)

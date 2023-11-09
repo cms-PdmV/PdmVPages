@@ -4,6 +4,7 @@ for RAW datasets and for matching its sublevel (children) data tiers.
 """
 from typing import List, Optional
 import pprint
+import re
 
 class ChildDataset:
     """
@@ -135,64 +136,119 @@ class RAWDataset:
             "twiki_runs": self.twiki_runs,
         }
 
+    def __repr__(self) -> str:
+        return pprint.pformat(
+            self.dict,
+            width=100,
+            compact=True,
+            depth=100
+        )
 
-class DatasetMatch:
+
+class DatasetMetadata:
     """
-    Models the child dataset matched for a specific data tier and campaign
+    Models all the attributes that could be extracted from
+    the dataset name and determines if the given
+    dataset name is valid using a given regex.
 
     Attributes:
-        campaign (str): Campaign linked to a child dataset
-        processing_string (str): Processing string for the dataset
-        dataset (str): Child dataset name
-        data_tier (str): Dataset data tier
-        era (str): Dataset era
+        full_name (str): Original dataset name, e.g: /BTagMu/Run2023C-PromptReco-v4/AOD
+        primary_dataset (str): Dataset primary dataset, e.g: BTagMu
+        era (str): Dataset era, e.g: Run2023C
+        processing_string (str): Dataset's processing string, e.g: PromptReco
+        version (str): Dataset's version, e.g: v4
+        datatier (str): Dataset's data tier, e.g: AOD
+        valid (bool): Determines if the dataset is valid using a predefined regex.
     """
-    def __init__(self, campaign: str, processing_string: str, dataset: str, data_tier: str, era: str):
-        self.campaign = campaign
-        self.processing_string = processing_string
-        self.dataset = dataset
-        self.data_tier = data_tier
+    ATTRIBUTE_REGEX: str = r"^/(\w*)/(Run[0-9]{4}[A-Z]){1}-(\w*)-(v[0-9]{1,2})/([A-Z]*)$"
+    SUBVERSION_REGEX: str = r"^(\w*)_(v[0-9]{1,2})$"
+    RAW_REGEX: str = r"^/(\w*)/(Run[0-9]{4}[A-Z]){1}-(v[0-9]{1,2})/(RAW)$"
+    RAW = re.compile(RAW_REGEX)
+    VALIDATOR = re.compile(ATTRIBUTE_REGEX)
+    SUBVERSION = re.compile(SUBVERSION_REGEX)
+
+    def __init__(self, name: str) -> None:
+        self.full_name: str = name
+        self.primary_dataset: str = ""
+        self.era: str = ""
+        self.processing_string: str = ""
+        self.version: str = ""
+        self.datatier: str = ""
+        self.__valid: bool = False
+
+        # Update the attributes
+        self.__build()
+
+    def __build(self) -> None:
+        """
+        Parses the metadata
+        """
+        is_raw: bool = self.__build_raw()
+        if not is_raw:
+            self.__build_non_raw()
+
+    def __build_raw(self) -> bool:
+        """
+        Checks if the dataset is related to a RAW one
+        and parses its data
+        """
+        components: List[str] = DatasetMetadata.RAW.findall(self.full_name)
+        if not components:
+            return False
+        
+        # Parse the data
+        primary_ds, era, version, datatier = components[0]
+        self.primary_dataset = primary_ds
         self.era = era
-    
-    @property
-    def dict(self) -> dict:
-        return {
-            "campaign": self.campaign,
-            "processing_string": self.processing_string,
-            "dataset": self.dataset,
-            "data_tier": self.data_tier,
-            "era": self.era
-        }
-    
+        self.version = version
+        self.datatier = datatier
+        self.__valid = True
+        return True
 
-class EraDatasets:
-    """
-    Models the sublevel (children) datasets from a RAW dataset
-    for a specific era
-
-    Attributes:
-        era (str): Desired era
-        aod (DatasetMatch) | None: Matched dataset for AOD data tier,
-            If there is no VALID|PRODUCTION AOD dataset for this RAW dataset, this attribute
-            must be None
-        miniaod (DatasetMatch) | None: Matched dataset for MiniAOD data tier,
-            If there is no VALID|PRODUCTION MiniAOD dataset for this RAW dataset, this attribute
-            must be None
-        nanoaod (DatasetMatch) | None: Matched dataset for NanoAOD data tier
-            If there is no VALID|PRODUCTION NanoAOD dataset for this RAW dataset, this attribute
-            must be None
-    """
-    def __init__(self, era: str, aod: Optional[DatasetMatch], miniaod: Optional[DatasetMatch], nanoaod: Optional[DatasetMatch]):
+    def __build_non_raw(self) -> None:
+        """
+        Parse the metadata for a non RAW dataset
+        """
+        components: List[str] = DatasetMetadata.VALIDATOR.findall(self.full_name)
+        if not components:
+            return
+    
+        # Parse the fields
+        primary_ds, era, ps, version, datatier = components[0]
+        self.primary_dataset = primary_ds
         self.era = era
-        self.aod = aod
-        self.miniaod = miniaod
-        self.nanoaod = nanoaod
+        self.processing_string = ps
+        self.version = version
+        self.datatier = datatier
+        self.__valid = True
+
+        # Check if the version is overwritten in the PS
+        self.__check_ps()
+
+    def __check_ps(self) -> None:
+        """
+        Check the processing string to determine
+        if there is a version tag that overwrites the
+        current one.
+        """
+        components: List[str] = DatasetMetadata.SUBVERSION.findall(self.processing_string)
+        if not components:
+            return
+        
+        # Parse the fields
+        _, version = components[0]
+        self.version = version
 
     @property
-    def dict(self) -> dict:
-        return {
-            "era": self.era,
-            "AOD": self.aod.dict,
-            "MINIAOD": self.miniaod.dict,
-            "NANOAOD": self.nanoaod.dict
-        }
+    def valid(self) -> bool:
+        return self.__valid
+    
+    def __repr__(self) -> str:
+        repr: str = (
+            f"Dataset <valid={self.valid} name={self.full_name} "
+            f"primary_dataset={self.primary_dataset} era={self.era} "
+            f"processing_string={self.processing_string} version={self.version} "
+            f"datatier={self.datatier}>"
+        )
+        return repr
+
