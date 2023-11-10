@@ -131,7 +131,7 @@ def match_era_datasets(
     return childrens.output if childrens else []
 
 
-def get_dataset_info(dataset: str, year_info: dict) -> dict:
+def get_dataset_info(dataset: str, year_info: dict) -> Optional[RAWDataset]:
     """
     For a RAW dataset, this function retrieves its metadata
     and all the sublevel datasets filtered by the interest campaigns and
@@ -142,9 +142,8 @@ def get_dataset_info(dataset: str, year_info: dict) -> dict:
         year_info (dict): Eras for the desired year
 
     Returns:
-        dict: A dict containing the name, campaign, type (datatier),
-            prepid, runs, events, workflow and processing string and all
-            the data of the sublevel datatiers if they exist.
+        RAWDataset: RAW dataset information
+        None: If RAW dataset status is not 'VALID' or 'PRODUCTION'
     """
     dataset_content: Optional[Tuple[dict, dict]] = das_get_dataset_info(dataset=dataset)
     if not dataset_content:
@@ -183,7 +182,7 @@ def get_dataset_info(dataset: str, year_info: dict) -> dict:
             "Unable to query the children data tier for RAW dataset: %s", dataset
         )
 
-    return raw_dataset.dict
+    return raw_dataset
 
 
 # Load dataset names using file
@@ -203,8 +202,8 @@ with open("data/years.json", "r", encoding="utf-8") as file:
 
 MAX_EXECUTORS = 25
 BREAKER = len(datasets)
-results = []
-dataset_args = []
+results: List[RAWDataset] = []
+dataset_args: List[Tuple[str, dict]] = []
 
 # Retrieve the dataset name and its year
 for index, raw_dataset in enumerate(datasets):
@@ -243,8 +242,15 @@ with concurrent.futures.ThreadPoolExecutor(max_workers=MAX_EXECUTORS) as executo
 missing = len(dataset_args) - len(results)
 logger.warning("Missing data for %s datasets", missing)
 logger.info("Storing data")
+
+# Order the datasets, their children and parse as a dict.
+results_dict: List[dict] = [
+    rd.dict
+    for rd in sorted(results, key=lambda raw_d: raw_d.dataset)
+]
+
 with open(f"{OUTPUT_FOLDER}/data.json", "w") as output_file:
-    json.dump(results, output_file, indent=1, sort_keys=True)
+    json.dump(results_dict, output_file, indent=1, sort_keys=True)
 
 end_time = datetime.datetime.now()
 elapsed = end_time - start_time

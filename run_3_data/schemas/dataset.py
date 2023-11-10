@@ -67,7 +67,9 @@ class ChildDataset:
 
     @property
     def dict(self) -> dict:
+        self.output = sorted(self.output, key=lambda cd: cd.dataset)
         child_dataset: List[dict] = [cd.dict for cd in self.output]
+
         return {
             "dataset": self.dataset,
             "events": self.events,
@@ -126,7 +128,9 @@ class RAWDataset:
 
     @property
     def dict(self) -> dict:
+        self.output = sorted(self.output, key=lambda cd: cd.dataset)
         child_dataset: List[dict] = [cd.dict for cd in self.output]
+
         return {
             "dataset": self.dataset,
             "events": self.events,
