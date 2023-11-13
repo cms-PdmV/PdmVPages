@@ -9,8 +9,12 @@ import concurrent.futures
 from typing import List
 from utils.file import *
 from utils.das import *
+from utils.stats_rest import Stats2
 from schemas.dataset import *
 
+# Stats2 client
+cookie_path: str = os.getenv("STATS_COOKIE_PATH")
+stats: Stats2 = Stats2(cookie=cookie_path)
 
 # Logger
 # Set up logging
@@ -41,13 +45,13 @@ def __retrieve_dataset_info(dataset: DatasetMetadata) -> Optional[ChildDataset]:
     dataset_info = das_get_dataset_info(dataset=dataset.full_name)
     if not dataset.valid or not dataset_info:
         return None
-    
+
     summary, info = dataset_info
     events: int = summary.get("nevents", -2)
     runs: List[int] = das_get_runs(dataset=dataset.full_name)
     dataset_type: str = info.get("status", "ERROR")
 
-    return ChildDataset(
+    child_dataset: ChildDataset = ChildDataset(
         dataset=dataset.full_name,
         events=events,
         runs=runs,
@@ -57,6 +61,16 @@ def __retrieve_dataset_info(dataset: DatasetMetadata) -> Optional[ChildDataset]:
         datatier=dataset.datatier,
         era="<other>",
     )
+
+    # Retrieve the PrepID and workflow data from Stats2
+    stats2_info: Optional[List[dict]] = stats.get_output_dataset(output_dataset=dataset.full_name)
+    if stats2_info:
+        raw_data = stats2_info[0]
+        stats_data: Stats2Information = Stats2Information(dataset=dataset.full_name, raw=raw_data)
+        child_dataset.prepid = stats_data.prepid
+        child_dataset.workflow = stats_data.workflow
+
+    return child_dataset
 
 
 def build_relationship(

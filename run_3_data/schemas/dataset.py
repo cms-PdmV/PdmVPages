@@ -6,6 +6,34 @@ from typing import List, Optional
 import pprint
 import re
 
+class Stats2Information:
+    """
+    Data object to store Stats2 information
+    for some output datasets.
+
+    Attributes:
+        dataset (str): Dataset information to retrieve.
+            using the `output_dataset` parameter.
+        campaigns (list[str]): List of campaigns the dataset is related
+            according to Stats2 records.
+        input_dataset (str): Parent dataset used to produce this one.
+        workflow (str): ReqMgr2 request that produced this dataset.
+        prepid (str): PdmV identifier related to the request that produced
+            this dataset. For this context, it is the identifier for the ReReco request
+            in PdmV ReReco application.
+        processing_string (str): Dataset's processing string.
+        raw (dict): Stats2 record for this dataset.
+    """
+    def __init__(self, dataset: str, raw: dict) -> None:
+        self.dataset: str = dataset
+        self.raw: dict = raw
+        self.campaigns: List[str] = self.raw.get("Campaigns", [])
+        self.input_dataset: str = self.raw.get("InputDataset", "")
+        self.workflow: str = self.raw.get("RequestName", "")
+        self.prepid: str = self.raw.get("PrepID", "")
+        self.processing_string: str = self.raw.get("ProcessingString", "")
+
+
 class ChildDataset:
     """
     This class represents the child datasets derived from a RAW dataset.
