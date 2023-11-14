@@ -142,7 +142,7 @@
             <br>
             <span class="sort" @click="changeSortToColumn('aod_dataset')">Dataset</span>
             <br>
-            <small>Runs | events | processing string | campaign</small>
+            <small>Runs | processing string | campaign</small>
             <br>
             <input type="text" class="header-search" placeholder="Type to search..." v-model="search.aod_dataset" @input="applyFilters()">
           </th>
@@ -159,7 +159,7 @@
             <br>
             <span class="sort" @click="changeSortToColumn('miniaod_dataset')">Dataset</span>
             <br>
-            <small>Runs | events | processing string | campaign</small>
+            <small>Runs | processing string | campaign</small>
             <br>
             <input type="text" class="header-search" placeholder="Type to search..." v-model="search.miniaod_dataset" @input="applyFilters()">
           </th>
@@ -176,7 +176,7 @@
             <br>
             <span class="sort" @click="changeSortToColumn('nanoaod_dataset')">Dataset</span>
             <br>
-            <small>Runs | events | processing string | campaign</small>
+            <small>Runs | processing string | campaign</small>
             <br>
             <input type="text" class="header-search" placeholder="Type to search..." v-model="search.nanoaod_dataset" @input="applyFilters()">
           </th>
@@ -257,7 +257,7 @@
                 <br>
                 <a target="_blank" :href="makeDASLink(item.dataset)">{{item.dataset}}</a>
                 <br>
-                <small><ion-icon name="eye-outline" @click="checkDisplayRuns(item.dataset)"></ion-icon> {{item.runs.length}}&nbsp;runs {{item.processing_string}} | {{item.campaign}}</small>
+                <small><ion-icon name="eye-outline" @click="checkDisplayRuns(item.dataset)"></ion-icon> {{item.runs.length}}&nbsp;runs | {{item.processing_string}} | {{item.campaign}}</small>
                 <!-- Display runs for AOD, MINIAOD or NANOAOD dataset -->
                 <div v-if="item.dataset === displayRuns.AOD || item.dataset === displayRuns.MINIAOD || item.dataset === displayRuns.NANOAOD" class="row">
                   <template v-for="run in item.runs">
@@ -278,6 +278,10 @@
                 <template v-if="item.fraction > 1">
                   <br>
                   <small style="color: green">+{{(item.fraction - 1).toFixed(8)}}</small>
+                </template>
+                <template>
+                  <br>
+                  <small>{{item.events_difference}} events</small>
                 </template>
               </td>
               <td :rowspan="item.rowspan" :class="cellColor(item)" v-if="columns.diff_to_parent && (index == 1 && columns.aod || index == 2 && columns.miniaod || index == 3 && columns.nanoaod)">
