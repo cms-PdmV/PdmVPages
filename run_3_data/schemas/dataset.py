@@ -168,19 +168,19 @@ class ChildDataset:
         self,
         metadata: DatasetMetadata,
         events: int = -1,
-        runs: List[int] = [],
+        runs: Optional[List[int]] = None,
         type: str = "",
         campaign: str = "",
-        output: List = [],
+        output: Optional[List] = None,
         prepid: Optional[str] = None,
         workflow: Optional[str] = None,
     ):
         self.metadata = metadata
         self.events = events
-        self.runs = runs
+        self.runs = [] if not runs else runs
         self.type = type
         self.campaign = campaign
-        self.output = output
+        self.output = [] if not output else output
         self.prepid = prepid
         self.workflow = workflow
 
@@ -233,15 +233,15 @@ class RAWDataset:
         events: int,
         year: int,
         runs: List[int],
-        output: List[ChildDataset] = [],
-        twiki_runs: List[int] = [],
+        output: Optional[List[ChildDataset]] = None,
+        twiki_runs: Optional[List[int]] = None,
     ):
         self.dataset = dataset
         self.events = events
         self.year = year
         self.runs = runs
-        self.output = output
-        self.twiki_runs = twiki_runs
+        self.output = [] if not output else output
+        self.twiki_runs = [] if not twiki_runs else twiki_runs
 
     @property
     def dict(self) -> dict:

@@ -152,13 +152,11 @@ def group_as_child_dataset(children: List[DatasetMetadata]) -> List[ChildDataset
             if not parent:
                 parent = current_child
                 reduced = current_child
-                current_child.output = []
                 continue
 
             if reduced:
                 reduced.output.append(current_child)
                 reduced = current_child
-                current_child.output = []
 
         if reduced.output != []:
             raise ValueError("The latest child appended should not have references to any children")
