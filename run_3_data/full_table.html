@@ -454,6 +454,17 @@
                 item.rowspan = 1;
               }
             });
+            for (let i = list.length - 1; i > 0; i--) {
+              let thisEntry = list[i];
+              let otherEntry = list[i - 1];
+              for (let j = 0; j < Math.min(thisEntry.length, otherEntry.length); j++) {
+                if (thisEntry[j]['dataset'] !== otherEntry[j]['dataset']) {
+                  break
+                }
+                otherEntry[j].rowspan += thisEntry[j].rowspan;
+                thisEntry[j].rowspan = 0;
+              }
+            }
           },
           applyFilters: function() {
             let filteredRows = this.data;
