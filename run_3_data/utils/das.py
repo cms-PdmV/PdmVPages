@@ -5,8 +5,8 @@ DAS CLI client
 import json
 import os
 import logging
-from typing import List, Tuple, Optional
-from schemas.dataset import DatasetMetadata
+from typing import List, Tuple, Optional, Dict
+from schemas.dataset import DatasetMetadata, ChildDataset
 
 
 logger: logging.Logger = logging.getLogger()
@@ -82,7 +82,9 @@ def das_get_dataset_info(dataset: str) -> Optional[Tuple[dict, dict]]:
         Tuple[dict, dict]: If the dataset has files and its status is valid or production.
             The first dict is the dbs3:filesummaries object
             and the second dict is the dbs3:dataset_info.
-        None: If the dataset does not have files or if its status is not valid or production.
+
+    Raises:
+        ValueError: If the dataset does not have files or if its status is not valid or production.
     """
     FILE_SUMMARY = "dbs3:filesummaries"
     DATASET_INFO = "dbs3:dataset_info"
@@ -99,16 +101,75 @@ def das_get_dataset_info(dataset: str) -> Optional[Tuple[dict, dict]]:
         elif obj["das"]["services"][0] == DATASET_INFO:
             dataset_info = obj["dataset"][0]
 
+    dataset_status = dataset_info.get("status")
+    dataset_events = file_summary.get("nevents", -2)
+    dataset_files = file_summary.get("nfiles", -2)
     if (
-        dataset_info.get("status") in ("PRODUCTION", "VALID")
-        and file_summary.get("nfiles") > 0
+        dataset_status in ("PRODUCTION", "VALID")
+        and dataset_files > 0
     ):
         return file_summary, dataset_info
 
-    return None
+    error_msg: str = (
+        f"Dataset ({dataset}) - Status: {dataset_status} - "
+        f"Events: {dataset_events} - Files: {dataset_files}"
+    )
+    raise ValueError(error_msg)
 
 
-def das_scan_children(dataset: DatasetMetadata, next_tier: str) -> List[DatasetMetadata]:
+def group_as_child_dataset(children: List[DatasetMetadata]) -> List[ChildDataset]:
+    """
+    Groups all children found from a parent dataset
+    following the data tier hierarchy.
+
+    Args:
+        children (list[DatasetMetadata]): List of related children data sets.
+    
+    Returns:
+        list[ChildDataset]: Children datasets grouped by data tier hierarchy.
+    """
+    # Key: (processing_str, version)
+    groups: Dict[Tuple[str, str], List[DatasetMetadata]] = {}
+
+    # Sort all the data sets per data tier.
+    sorted_children: List[DatasetMetadata] = sorted(children, key=lambda c: c.datatier)
+
+    # Group the datasets
+    for child in sorted_children:
+        group_key = (child.processing_string, child.version)
+        groups[group_key] = groups.get(group_key, []) + [child]
+
+    # Key: (processing_str, version)
+    reduced_children: Dict[Tuple[str, str], ChildDataset] = {}
+
+    # Cast and reduce
+    for key, group_children in groups.items():
+        parent: Optional[ChildDataset] = None
+        reduced: Optional[ChildDataset] = None
+
+        for child in group_children:
+            current_child: ChildDataset = ChildDataset(metadata=child)
+            if not parent:
+                parent = current_child
+                reduced = current_child
+                current_child.output = []
+                continue
+
+            if reduced:
+                reduced.output.append(current_child)
+                reduced = current_child
+                current_child.output = []
+
+        if reduced.output != []:
+            raise ValueError("The latest child appended should not have references to any children")
+        
+        reduced_children[key] = parent
+
+    children: List[ChildDataset] = list(reduced_children.values())
+    return children
+
+
+def das_scan_children(dataset: DatasetMetadata, next_tier: str) -> List[ChildDataset]:
     """
     For a given dataset name and the children data tier
     query all the possible children data sets and retrieve its names
@@ -122,27 +183,24 @@ def das_scan_children(dataset: DatasetMetadata, next_tier: str) -> List[DatasetM
     Returns:
         list[DatasetMetadata]: List of all the children datasets for the given one.
     """
+    logger.debug("Scanning children for: %s", dataset)
+    DESIRED_DATA_TIERS: List[str] = ["AOD", "MINIAOD", "NANOAOD"]
     children: List[str] = []
 
-    # Create a wildcard query for the next data tier
-    next_tier_query: str = f"{dataset.full_name.rsplit('/', 1)[0]}/{next_tier}"
-    wildcard_query: str = f"dataset status=* dataset='{next_tier_query}'"
-    children += das_get_datasets_names(query=wildcard_query)
-
-    # Also retrieve other possible children with different PS
     child_query: str = f"child dataset='{dataset.full_name}'"
     child_datasets: List[str] = das_get_datasets_names(query=child_query)
     children += child_datasets
 
-    # Remove duplicates and just pick the ones related to the next data tier
+    # Remove duplicates and filter invalid names and data tier
     children_metadata: List[DatasetMetadata] = [
         DatasetMetadata(name=ds)
         for ds in list(set(children))
     ]
-    children_metadata: List[DatasetMetadata] = [
+    children_metadata = [
         cd
         for cd in children_metadata
-        if cd.datatier == next_tier
+        if cd.valid and cd.datatier in DESIRED_DATA_TIERS
     ]
 
-    return children_metadata
+    children: List[ChildDataset] = group_as_child_dataset(children=children_metadata)
+    return children

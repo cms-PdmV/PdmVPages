@@ -4,6 +4,14 @@ import os
 import random
 import re
 import logging
+
+# Configure logging format before creating
+# any logger instance.
+logging.basicConfig(
+    format="[%(asctime)s][%(levelname)s][%(filename)s][%(lineno)s]: %(message)s",
+    level=logging.INFO
+)
+
 import datetime
 import concurrent.futures
 from typing import List
@@ -17,10 +25,6 @@ cookie_path: str = os.getenv("STATS_COOKIE_PATH")
 stats: Stats2 = Stats2(cookie=cookie_path)
 
 # Logger
-# Set up logging
-logging.basicConfig(
-    format="[%(asctime)s][%(levelname)s] %(message)s", level=logging.INFO
-)
 logger = logging.getLogger()
 
 # Regex pattern for year
@@ -31,57 +35,69 @@ year_regex = re.compile(r"([0-9]{4})")
 OUTPUT_FOLDER = f"{os.getcwd()}/output"
 
 
-def __retrieve_dataset_info(dataset: DatasetMetadata) -> Optional[ChildDataset]:
+def __retrieve_dataset_info(dataset: ChildDataset) -> Optional[ChildDataset]:
     """
     Retrieve the dataset information for a given dataset name
 
     Args:
-        dataset (DatasetMetadata): Dataset metadata
-    
+        dataset (ChildDataset): Dataset to complete its data
+
     Returns:
-        ChildDataset: Dataset information parsed into the required format
-        None: If the status for the requested dataset is not ("PRODUCTION", "VALID")
+        ChildDataset: Given dataset object with other attributes included
+        None: If the dataset information in DAS indicates it is INVALID or the name
+            is not adecuate.
     """
-    dataset_info = das_get_dataset_info(dataset=dataset.full_name)
-    if not dataset.valid or not dataset_info:
+    if not dataset.metadata.valid:
+        logger.warning(
+            "Dataset name doesn't comply the filter: %s",
+            dataset.metadata
+        )
         return None
 
+    # Retrieve the information from DAS
+    dataset_info = None
+    try:
+        dataset_info = das_get_dataset_info(dataset=dataset.metadata.full_name)
+    except ValueError as e:
+        logger.warning(e)
+        return None
+
+    # Complete the data object attributes.
     summary, info = dataset_info
     events: int = summary.get("nevents", -2)
-    runs: List[int] = das_get_runs(dataset=dataset.full_name)
+    runs: List[int] = das_get_runs(dataset=dataset.metadata.full_name)
     dataset_type: str = info.get("status", "ERROR")
 
-    child_dataset: ChildDataset = ChildDataset(
-        dataset=dataset.full_name,
-        events=events,
-        runs=runs,
-        type=dataset_type,
-        campaign="<other>",
-        processing_string=dataset.processing_string,
-        datatier=dataset.datatier,
-        era="<other>",
-    )
+    dataset.events = events
+    dataset.runs = runs
+    dataset.type = dataset_type
+    dataset.campaign = "<other>"
 
     # Retrieve the PrepID and workflow data from Stats2
-    stats2_info: Optional[List[dict]] = stats.get_output_dataset(output_dataset=dataset.full_name)
+    stats2_info: Optional[List[dict]] = stats.get_output_dataset(
+        output_dataset=dataset.metadata.full_name
+    )
     if stats2_info:
         raw_data = stats2_info[0]
-        stats_data: Stats2Information = Stats2Information(dataset=dataset.full_name, raw=raw_data)
-        child_dataset.prepid = stats_data.prepid
-        child_dataset.workflow = stats_data.workflow
+        stats_data: Stats2Information = Stats2Information(
+            dataset=dataset.metadata.full_name,
+            raw=raw_data
+        )
+        dataset.prepid = stats_data.prepid
+        dataset.workflow = stats_data.workflow
 
-    return child_dataset
+    return dataset
 
 
 def build_relationship(
-    dataset: DatasetMetadata, remaining_data_tiers: List[str]
-) -> Optional[ChildDataset]:
+    dataset: ChildDataset, remaining_data_tiers: List[str]
+) -> ChildDataset:
     """
     Performs an in-depth search, recursively looking for the
     children datasets for a given one.
 
     Args:
-        dataset (DatasetMetadata): Dataset to retrieve its children.
+        dataset (ChildDataset): Dataset to retrieve its children.
         remaining_data_tiers (list[str]): Data tiers remaining
             to scan.
     Returns:
@@ -97,25 +113,26 @@ def build_relationship(
     children_datasets: List[ChildDataset] = []
     if not base_case_reached:
         inmediate_next: str = remaining_data_tiers[0]
-        inmediate_children: List[DatasetMetadata] = das_scan_children(
-            dataset=dataset, next_tier=inmediate_next
+        inmediate_children: List[ChildDataset] = das_scan_children(
+            dataset=dataset.metadata, next_tier=inmediate_next
         )
+        all_children: List[ChildDataset] = list(set(inmediate_children + dataset.output))
+        
         # Recursive case: Search in-depth for the children
-        for cd in inmediate_children:
-            if cd.valid:
-                children: Optional[ChildDataset] = build_relationship(
-                    dataset=cd,
-                    remaining_data_tiers=remaining_data_tiers[1:]
-                )
-                if children:
-                    children_datasets.append(children)
+        for cd in all_children:
+            children: Optional[ChildDataset] = build_relationship(
+                dataset=cd,
+                remaining_data_tiers=remaining_data_tiers[1:]
+            )
+            if children:
+                children_datasets.append(children)
 
     # For the base case, retrieve the dataset information
     # and parse the hierarchy
     dataset: Optional[ChildDataset] = __retrieve_dataset_info(dataset=dataset)
     if dataset:
         dataset.output = children_datasets
-    
+
     return dataset
 
 
@@ -138,8 +155,9 @@ def match_era_datasets(
             given RAW dataset grouped by data tier.
     """
     DESIRED_DATA_TIERS: List[str] = ["AOD", "MINIAOD", "NANOAOD"]
+    raw_as_child: ChildDataset = ChildDataset(metadata=DatasetMetadata(name=raw_dataset))
     childrens: Optional[ChildDataset] = build_relationship(
-        dataset=DatasetMetadata(name=raw_dataset),
+        dataset=raw_as_child,
         remaining_data_tiers=DESIRED_DATA_TIERS
     )
     return childrens.output if childrens else []
