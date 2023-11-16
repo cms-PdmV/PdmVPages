@@ -3,6 +3,7 @@ This module models the schema required
 for RAW datasets and for matching its sublevel (children) data tiers.
 """
 from typing import List, Optional
+import copy
 import pprint
 import re
 
@@ -44,7 +45,13 @@ class DatasetMetadata:
         full_name (str): Original dataset name, e.g: /BTagMu/Run2023C-PromptReco-v4/AOD
         primary_dataset (str): Dataset primary dataset, e.g: BTagMu
         era (str): Dataset era, e.g: Run2023C
+        year (str): Year related to the era, e.g: 2023
         processing_string (str): Dataset's processing string, e.g: PromptReco
+        filtered_ps (str): In case the processing string includes a version,
+            this field stores the PS without this attribute, e.g: 
+            - /BTagMu/Run2022G-PromptNanoAODv11_v1-v2/NANOAOD
+                processing_string := PromptNanoAODv11_v1
+                filtered_ps := PromptNanoAODv11
         version (str): Dataset's version, e.g: v4
         datatier (str): Dataset's data tier, e.g: AOD
         valid (bool): Determines if the dataset is valid using a predefined regex.
@@ -61,6 +68,7 @@ class DatasetMetadata:
         self.primary_dataset: str = ""
         self.era: str = ""
         self.processing_string: str = ""
+        self.filtered_ps: str = ""
         self.version: str = ""
         self.datatier: str = ""
         self.__valid: bool = False
@@ -89,6 +97,7 @@ class DatasetMetadata:
         primary_ds, era, version, datatier = components[0]
         self.primary_dataset = primary_ds
         self.era = era
+        self.year = era[3:-1]
         self.version = version
         self.datatier = datatier
         self.__valid = True
@@ -106,6 +115,7 @@ class DatasetMetadata:
         primary_ds, era, ps, version, datatier = components[0]
         self.primary_dataset = primary_ds
         self.era = era
+        self.year = era[3:-1]
         self.processing_string = ps
         self.version = version
         self.datatier = datatier
@@ -125,7 +135,8 @@ class DatasetMetadata:
             return
         
         # Parse the fields
-        _, version = components[0]
+        filtered_ps, version = components[0]
+        self.filtered_ps = filtered_ps
         self.version = version
 
     @property
@@ -264,3 +275,85 @@ class RAWDataset:
             compact=True,
             depth=100
         )
+
+
+class PageMetadata:
+    """
+    Models and stores the campaign matching given in the 
+    input file: 'data/years.json'. This files defines the
+    PdmV campaign tag for a specific group of processing strings
+    based on the data tier and the era.
+
+    Attributes:
+        metadata (dict): Original content of the years file.
+        transformed (dict): Metadata content parsed to easily
+            retrieve the campaign.
+    """
+    def __init__(self, metadata: dict) -> None:
+        self.metadata: dict = metadata
+        self.transformed: dict = self.__parsed_content()
+
+    def __parsed_content(self) -> dict:
+        """
+        Iterates over all the dictionary and reduce the
+        campaigns and processing string per data tier to
+        a direct match, e.g: 
+
+        "MINIAOD": [
+          {
+            "campaign": "MiniAODv3",
+            "processing_string": ["27Jun2023"]
+          }
+        ],
+
+        to:
+
+        "MINIAOD": {
+          "27Jun2023": "MiniAODv3",
+          "14Apr2023": "MiniAODv3"
+        },
+
+        Returns:
+            A dictionary with the processing string and campaigns
+            flatten to query them directly.
+        """
+        transformed: dict = copy.deepcopy(self.metadata)
+
+        for year, data in self.metadata.items():
+            era_content: dict = data.get("era", {})
+            for run, data_tier_content in era_content.items():
+                for data_tier, campaign_content in data_tier_content.items():
+                    reduced_ps: dict = {}
+                    for campaign_match in campaign_content:
+                        campaign: str = campaign_match["campaign"]
+                        processing_str: List[str] = campaign_match["processing_string"]
+                        campaign_tags: dict = {
+                            ps: campaign
+                            for ps in processing_str
+                        }
+                        reduced_ps = {**reduced_ps, **campaign_tags}
+                    
+                    # Update the transformed data
+                    transformed[year]["era"][run][data_tier] = reduced_ps
+        
+        return transformed
+    
+    def campaign(self, metadata: DatasetMetadata) -> str:
+        """
+        Retrieves the campaign related to the data set
+        processing string. In case the campaign tag is not
+        available, the tag '<other>' will be returned.
+
+        Args:
+            metadata (DatasetMetadata): Data set metadata.
+        """
+        ps: str = metadata.filtered_ps or metadata.processing_string
+        try:
+            campaign: str = (
+                self.transformed[metadata.year]
+                ["era"][metadata.era]
+                [metadata.datatier][ps]
+            )
+            return campaign
+        except KeyError:
+            return "<other>"

@@ -27,10 +27,6 @@ stats: Stats2 = Stats2(cookie=cookie_path)
 # Logger
 logger = logging.getLogger()
 
-# Regex pattern for year
-era_regex = re.compile(r"Run([0-9]{4})([A-Z]{1})")
-year_regex = re.compile(r"([0-9]{4})")
-
 # Constant
 OUTPUT_FOLDER = f"{os.getcwd()}/output"
 
@@ -71,7 +67,7 @@ def __retrieve_dataset_info(dataset: ChildDataset) -> Optional[ChildDataset]:
     dataset.events = events
     dataset.runs = runs
     dataset.type = dataset_type
-    dataset.campaign = "<other>"
+    dataset.campaign = page_metadata.campaign(dataset.metadata)
 
     # Retrieve the PrepID and workflow data from Stats2
     stats2_info: Optional[List[dict]] = stats.get_output_dataset(
@@ -137,25 +133,21 @@ def build_relationship(
 
 
 def match_era_datasets(
-    raw_dataset: str,
-    era: str,
-    era_data: dict,
+    raw_metadata: DatasetMetadata,
 ) -> List[ChildDataset]:
     """
     Queries the children datasets linked to a RAW datasets and filters
     them to match only those specified in the desired era
 
     Args:
-        raw_dataset (str): RAW dataset name
-        era (str): Desired era
-        era_match (dict): Contains the campaigns and processing string desired for each data tier
+        raw_dataset (str): RAW data set metadata
 
     Returns:
         List[ChildDataset]: A list with all the children datasets for the
             given RAW dataset grouped by data tier.
     """
     DESIRED_DATA_TIERS: List[str] = ["AOD", "MINIAOD", "NANOAOD"]
-    raw_as_child: ChildDataset = ChildDataset(metadata=DatasetMetadata(name=raw_dataset))
+    raw_as_child: ChildDataset = ChildDataset(metadata=raw_metadata)
     childrens: Optional[ChildDataset] = build_relationship(
         dataset=raw_as_child,
         remaining_data_tiers=DESIRED_DATA_TIERS
@@ -163,7 +155,7 @@ def match_era_datasets(
     return childrens.output if childrens else []
 
 
-def get_dataset_info(dataset: str, year_info: dict) -> Optional[RAWDataset]:
+def get_dataset_info(dataset: str) -> Optional[RAWDataset]:
     """
     For a RAW dataset, this function retrieves its metadata
     and all the sublevel datasets filtered by the interest campaigns and
@@ -177,6 +169,7 @@ def get_dataset_info(dataset: str, year_info: dict) -> Optional[RAWDataset]:
         RAWDataset: RAW dataset information
         None: If RAW dataset status is not 'VALID' or 'PRODUCTION'
     """
+    raw_metadata: DatasetMetadata = DatasetMetadata(name=dataset)
     dataset_content: Optional[Tuple[dict, dict]] = das_get_dataset_info(dataset=dataset)
     if not dataset_content:
         logger.error(
@@ -190,29 +183,20 @@ def get_dataset_info(dataset: str, year_info: dict) -> Optional[RAWDataset]:
     runs: List[int] = das_get_runs(dataset=dataset)
 
     # Parse the dataset's year from the era attributes
-    era = era_regex.search(string=dataset)[0]
-    year = year_regex.search(string=era)[0]
-
     raw_dataset: RAWDataset = RAWDataset(
-        dataset=dataset, events=events, year=year, runs=runs
+        dataset=dataset, 
+        events=events, 
+        year=raw_metadata.year, 
+        runs=runs
     )
 
-    # Retrieve the desired datasets for the era
-    era_data: dict = year_info.get(era)
-    if era_data:
-        # Retrieve the sublevel datasets
-        logger.info("Querying for the sublevel datasets for RAW dataset: %s" % dataset)
-        interest_children_datasets: List[ChildDataset] = match_era_datasets(
-            raw_dataset=dataset, era=era, era_data=era_data
-        )
-        if interest_children_datasets:
-            raw_dataset.output = interest_children_datasets
-        else:
-            logger.error("No child datasets for RAW dataset: %s", dataset)
+    # Retrieve the sublevel datasets
+    logger.info("Querying for the sublevel datasets for RAW dataset: %s" % dataset)
+    interest_children_datasets: List[ChildDataset] = match_era_datasets(raw_metadata=raw_metadata)
+    if interest_children_datasets:
+        raw_dataset.output = interest_children_datasets
     else:
-        logger.error(
-            "Unable to query the children data tier for RAW dataset: %s", dataset
-        )
+        logger.error("No child datasets for RAW dataset: %s", dataset)
 
     return raw_dataset
 
@@ -231,7 +215,10 @@ datasets = sorted(datasets)
 with open("data/years.json", "r", encoding="utf-8") as file:
     years = json.load(file)
 
+# Metadata information
+page_metadata: PageMetadata = PageMetadata(metadata=years)
 
+# Concurrent executor
 MAX_EXECUTORS = 25
 BREAKER = len(datasets)
 results: List[RAWDataset] = []
@@ -241,14 +228,7 @@ dataset_args: List[Tuple[str, dict]] = []
 for index, raw_dataset in enumerate(datasets):
     if index == BREAKER:
         break
-    for year, year_info in years.items():
-        if "/Run%s" % (year) in raw_dataset:
-            dataset_year = (raw_dataset, year_info.get("era"))
-            dataset_args.append(dataset_year)
-            break
-    else:
-        logger.error("***Could not find year info for %s ***", raw_dataset)
-        continue
+    dataset_args.append((raw_dataset,))
 
 # Use a concurrent execution to retrieve the data
 logger.info("Scannning %d datasets", len(dataset_args))

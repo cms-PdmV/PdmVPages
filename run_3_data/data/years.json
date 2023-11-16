@@ -2,176 +2,188 @@
   "2022": {
     "era": {
       "Run2022A": {
-        "AOD": {
-          "campaign": "AOD",
-          "processing_string": "27Jun2023"
-        },
-        "MINIAOD": {
-          "campaign": "MiniAODv3",
-          "processing_string": "27Jun2023"
-        },
-        "NANOAOD": {
-          "campaign": "NanoAODv11",
-          "processing_string": "PromptNanoAODv11"
-        }
+        "AOD": [
+          {
+            "campaign": "AOD",
+            "processing_string": ["27Jun2023"]
+          }
+        ],
+        "MINIAOD": [
+          {
+            "campaign": "MiniAODv3",
+            "processing_string": ["27Jun2023"]
+          }
+        ],
+        "NANOAOD": [
+          {
+            "campaign": "NanoAODv11",
+            "processing_string": ["PromptNanoAODv11"]
+          } 
+        ]
       },
       "Run2022B": {
-        "AOD": {
-          "campaign": "AOD",
-          "processing_string": "27Jun2023"
-        },
-        "MINIAOD": {
-          "campaign": "MiniAODv3",
-          "processing_string": "27Jun2023"
-        },
-        "NANOAOD": {
-          "campaign": "NanoAODv11",
-          "processing_string": "PromptNanoAODv11"
-        }
+        "AOD": [
+          {
+            "campaign": "AOD",
+            "processing_string": ["27Jun2023"]
+          }
+        ],
+        "MINIAOD": [
+          {
+            "campaign": "MiniAODv3",
+            "processing_string": ["27Jun2023"]
+          }
+        ],
+        "NANOAOD": [
+          {
+            "campaign": "NanoAODv11",
+            "processing_string": ["PromptNanoAODv11"]
+          } 
+        ]
       },
       "Run2022C": {
-        "AOD": {
-          "campaign": "AOD",
-          "processing_string": "27Jun2023"
-        },
-        "MINIAOD": {
-          "campaign": "MiniAODv3",
-          "processing_string": "27Jun2023"
-        },
-        "NANOAOD": {
-          "campaign": "NanoAODv11",
-          "processing_string": "PromptNanoAODv11"
-        }
+        "AOD": [
+          {
+            "campaign": "AOD",
+            "processing_string": ["27Jun2023"]
+          }
+        ],
+        "MINIAOD": [
+          {
+            "campaign": "MiniAODv3",
+            "processing_string": ["27Jun2023"]
+          }
+        ],
+        "NANOAOD": [
+          {
+            "campaign": "NanoAODv11",
+            "processing_string": ["PromptNanoAODv11"]
+          } 
+        ]
       },
       "Run2022D": {
-        "AOD": {
-          "campaign": "AOD",
-          "processing_string": "27Jun2023"
-        },
-        "MINIAOD": {
-          "campaign": "MiniAODv3",
-          "processing_string": "27Jun2023"
-        },
-        "NANOAOD": {
-          "campaign": "NanoAODv11",
-          "processing_string": "PromptNanoAODv11"
-        }
+        "AOD": [
+          {
+            "campaign": "AOD",
+            "processing_string": ["27Jun2023"]
+          }
+        ],
+        "MINIAOD": [
+          {
+            "campaign": "MiniAODv3",
+            "processing_string": ["27Jun2023"]
+          }
+        ],
+        "NANOAOD": [
+          {
+            "campaign": "NanoAODv11",
+            "processing_string": ["PromptNanoAODv11"]
+          } 
+        ]
       },
       "Run2022E": {
-        "AOD": {
-          "campaign": "AOD",
-          "processing_string": "27Jun2023"
-        },
-        "MINIAOD": {
-          "campaign": "MiniAODv3",
-          "processing_string": "27Jun2023"
-        },
-        "NANOAOD": {
-          "campaign": "NanoAODv11",
-          "processing_string": "PromptNanoAODv11"
-        }
+        "AOD": [
+          {
+            "campaign": "AOD",
+            "processing_string": ["27Jun2023"]
+          }
+        ],
+        "MINIAOD": [
+          {
+            "campaign": "MiniAODv3",
+            "processing_string": ["27Jun2023"]
+          }
+        ],
+        "NANOAOD": [
+          {
+            "campaign": "NanoAODv11",
+            "processing_string": ["PromptNanoAODv11"]
+          } 
+        ]
       },
       "Run2022F": {
-        "AOD": {
-          "campaign": "AOD",
-          "processing_string": "PromptReco"
-        },
-        "MINIAOD": {
-          "campaign": "MiniAODv3",
-          "processing_string": "PromptReco"
-        },
-        "NANOAOD": {
-          "campaign": "NanoAODv11",
-          "processing_string": "PromptNanoAODv11"
-        }
+        "AOD": [
+          {
+            "campaign": "AOD",
+            "processing_string": ["PromptReco"]
+          }
+        ],
+        "MINIAOD": [
+          {
+            "campaign": "MiniAODv3",
+            "processing_string": ["PromptReco"]
+          }
+        ],
+        "NANOAOD": [
+          {
+            "campaign": "NanoAODv11",
+            "processing_string": ["PromptNanoAODv11"]
+          } 
+        ]
       },
       "Run2022G": {
-        "AOD": {
-          "campaign": "AOD",
-          "processing_string": "PromptReco"
-        },
-        "MINIAOD": {
-          "campaign": "MiniAODv3",
-          "processing_string": "PromptReco"
-        },
-        "NANOAOD": {
-          "campaign": "NanoAODv11",
-          "processing_string": "PromptNanoAODv11"
-        }
+        "AOD": [
+          {
+            "campaign": "AOD",
+            "processing_string": ["PromptReco"]
+          }
+        ],
+        "MINIAOD": [
+          {
+            "campaign": "MiniAODv3",
+            "processing_string": ["PromptReco"]
+          }
+        ],
+        "NANOAOD": [
+          {
+            "campaign": "NanoAODv11",
+            "processing_string": ["PromptNanoAODv11"]
+          } 
+        ]
       }
     }
   },
   "2023": {
     "era": {
-     "Run2023A": {
-        "AOD": {
-          "campaign": "AOD",
-          "processing_string": "PromptReco"
-        },
-        "MINIAOD": {
-          "campaign": "MiniAODv3",
-          "processing_string": "PromptReco"
-        },
-        "NANOAOD": {
-          "campaign": "NanoAODv12",
-          "processing_string": "PromptReco"
-        }
-      },
-      "Run2023B": {
-        "AOD": {
-          "campaign": "AOD",
-          "processing_string": "PromptReco"
-        },
-        "MINIAOD": {
-          "campaign": "MiniAODv3",
-          "processing_string": "PromptReco"
-        },
-        "NANOAOD": {
-          "campaign": "NanoAODv12",
-          "processing_string": "PromptReco"
-        }
-      },
       "Run2023C": {
-        "AOD": {
-          "campaign": "AOD",
-          "processing_string": "PromptReco"
-        },
-        "MINIAOD": {
-          "campaign": "MiniAODv3",
-          "processing_string": "PromptReco"
-        },
-        "NANOAOD": {
-          "campaign": "NanoAODv12",
-          "processing_string": "PromptNanoAODv12"
-        }
+        "AOD": [
+          {
+            "campaign": "AOD",
+            "processing_string": ["PromptReco"]
+          }
+        ],
+        "MINIAOD": [
+          {
+            "campaign": "MiniAODv3",
+            "processing_string": ["PromptReco"]
+          }
+        ],
+        "NANOAOD": [
+          {
+            "campaign": "NanoAODv12",
+            "processing_string": ["PromptNanoAODv12"]
+          } 
+        ]
       },
       "Run2023D": {
-        "AOD": {
-          "campaign": "AOD",
-          "processing_string": "PromptReco"
-        },
-        "MINIAOD": {
-          "campaign": "MiniAODv3",
-          "processing_string": "PromptReco"
-        },
-        "NANOAOD": {
-          "campaign": "NanoAODv12",
-          "processing_string": "PromptReco"
-        }
-      },
-      "Run2023E": {
-        "AOD": {
-          "campaign": "AOD",
-          "processing_string": "PromptReco"
-        },
-        "MINIAOD": {
-          "campaign": "MiniAODv3",
-          "processing_string": "PromptReco"
-        },
-        "NANOAOD": {
-          "campaign": "NanoAODv12",
-          "processing_string": "PromptReco"
-        }
+        "AOD": [
+          {
+            "campaign": "AOD",
+            "processing_string": ["PromptReco"]
+          }
+        ],
+        "MINIAOD": [
+          {
+            "campaign": "MiniAODv3",
+            "processing_string": ["PromptReco"]
+          }
+        ],
+        "NANOAOD": [
+          {
+            "campaign": "NanoAODv12",
+            "processing_string": ["PromptReco"]
+          } 
+        ]
       }
     }
   },
