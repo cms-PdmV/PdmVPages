@@ -115,7 +115,7 @@
   <body>
     <div id="app">
       <div class="logo">
-        <a href="https://cms-pdmv.cern.ch/home/" target="_blank"> <img src="logo_cropped.png" style="width: 200px;"> </a>
+        <a href="https://cms-pdmv-prod.web.cern.ch/home/" target="_blank"> <img src="logo_cropped.png" style="width: 200px;"> </a>
       </div>
       <h3 style="text-align: center;">CMS Main Monte Carlo Background Samples - UL</h3>
       <small style="text-align: center; margin-top: -12px; display: block"><i>proudly made by Jordan Martins</i></small>
@@ -473,10 +473,10 @@
             return result
           },
           makeMcMLink(prepid) {
-            return 'https://cms-pdmv.cern.ch/mcm/requests?prepid=' + prepid;
+            return 'https://cms-pdmv-prod.web.cern.ch/mcm/requests?prepid=' + prepid;
           },
           makeStats2Link(prepid) {
-            return 'https://cms-pdmv.cern.ch/stats/?request=' + prepid;
+            return 'https://cms-pdmv-prod.web.cern.ch/stats/?request=' + prepid;
           },
           makeTransferorLink(workflow_name) {
             return 'https://pdmv-pages.web.cern.ch/transferor_stuckor/?workflow=' + workflow_name;
