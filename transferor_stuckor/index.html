@@ -349,7 +349,7 @@
             return Math.round(seconds) + 's'
           },
           makeStatsLink(workflow) {
-            return 'https://cms-pdmv.cern.ch/stats?workflow_name=' + workflow;
+            return 'https://cms-pdmv-prod.web.cern.ch/stats/?workflow_name=' + workflow;
           },
           makeDASSiteLink(dataset) {
             return 'https://cmsweb.cern.ch/das/request?view=list&limit=50&instance=prod%2Fglobal&input=site+dataset%3D' + dataset;
