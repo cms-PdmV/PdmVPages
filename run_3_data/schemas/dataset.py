@@ -52,6 +52,12 @@ class DatasetMetadata:
             - /BTagMu/Run2022G-PromptNanoAODv11_v1-v2/NANOAOD
                 processing_string := PromptNanoAODv11_v1
                 filtered_ps := PromptNanoAODv11
+        filtered_version (str): Similar to the case described above,
+            this field stores the 'original' dataset version the current
+            customizes, it is only stored just as a reference. For example:
+            - /BTagMu/Run2022G-PromptNanoAODv11_v1-v2/NANOAOD
+                version := v2
+                filtered_version := v1
         version (str): Dataset's version, e.g: v4
         datatier (str): Dataset's data tier, e.g: AOD
         valid (bool): Determines if the dataset is valid using a predefined regex.
@@ -69,6 +75,7 @@ class DatasetMetadata:
         self.era: str = ""
         self.processing_string: str = ""
         self.filtered_ps: str = ""
+        self.filtered_version: str = ""
         self.version: str = ""
         self.datatier: str = ""
         self.__valid: bool = False
@@ -127,7 +134,7 @@ class DatasetMetadata:
     def __check_ps(self) -> None:
         """
         Check the processing string to determine
-        if there is a version tag that overwrites the
+        if there is a version tag that customizes the
         current one.
         """
         components: List[str] = DatasetMetadata.SUBVERSION.findall(self.processing_string)
@@ -137,7 +144,7 @@ class DatasetMetadata:
         # Parse the fields
         filtered_ps, version = components[0]
         self.filtered_ps = filtered_ps
-        self.version = version
+        self.filtered_version = version
 
     @property
     def valid(self) -> bool:
@@ -213,11 +220,25 @@ class ChildDataset:
             "workflow": self.workflow,
             "output": child_dataset,
         }
+    
+    def _children_names(self) -> str:
+        """
+        Retrieves all the dataset names related to
+        the children the current dataset has.
+        """
+        if not self.output:
+            return ""
+        
+        return pprint.pformat(
+            [e.metadata.full_name for e in self.output],
+            indent=4,
+            compact=True
+        )
 
     def __repr__(self) -> str:
         repr: str = (
             f"<ChildDataset full_name={self.metadata.full_name} "
-            f"children={len(self.output)} output_id={id(self.output)}>"
+            f"children({len(self.output)})={self._children_names()} output_id={id(self.output)}>"
         )
         return repr
 

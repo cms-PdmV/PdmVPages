@@ -5,6 +5,7 @@ DAS CLI client
 import json
 import os
 import logging
+import pprint
 from typing import List, Tuple, Optional, Dict
 from schemas.dataset import DatasetMetadata, ChildDataset
 
@@ -139,6 +140,8 @@ def group_as_child_dataset(children: List[DatasetMetadata]) -> List[ChildDataset
         group_key = (child.processing_string, child.version)
         groups[group_key] = groups.get(group_key, []) + [child]
 
+    logger.debug("Child dataset groups: %s", pprint.pformat(groups, indent=4, compact=True))
+
     # Key: (processing_str, version)
     reduced_children: Dict[Tuple[str, str], ChildDataset] = {}
 
@@ -164,6 +167,7 @@ def group_as_child_dataset(children: List[DatasetMetadata]) -> List[ChildDataset
         reduced_children[key] = parent
 
     children: List[ChildDataset] = list(reduced_children.values())
+    logger.debug("Child dataset result: %s", pprint.pformat(children, indent=4, compact=True))
     return children
 
 
