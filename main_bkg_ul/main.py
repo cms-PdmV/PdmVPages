@@ -2,14 +2,12 @@ import sys
 import time
 import random
 import json
-sys.path.append('/afs/cern.ch/cms/PPD/PdmV/tools/McM/')
-from rest import McM
-from stats_rest import Stats2
+from rest import McM, Stats2
 
 
-
+# Initialize clients
 mcm = McM(dev=False)
-stats = Stats2()
+stats = Stats2(dev=False)
 
 mcm_cache = {}
 def mcm_get(database, prepid):
