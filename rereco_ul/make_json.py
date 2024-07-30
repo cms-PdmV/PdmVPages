@@ -6,11 +6,11 @@ import os
 import random
 import re
 import hashlib
-from stats_rest import Stats2
+from rest import Stats2
 from connection_wrapper import ConnectionWrapper
 
 
-stats = Stats2(cookie='stats-cookie.txt')
+stats = Stats2(cookie='stats-cookie.txt', dev=False)
 cmsweb = ConnectionWrapper('cmsweb.cern.ch', keep_open=True)
 das_events_cache = {}
 das_runs_cache = {}
