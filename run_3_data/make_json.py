@@ -15,14 +15,14 @@ logging.basicConfig(
 import datetime
 import concurrent.futures
 from typing import List
+from rest import Stats2
 from utils.file import *
 from utils.das import *
-from utils.stats_rest import Stats2
 from schemas.dataset import *
 
 # Stats2 client
 cookie_path: str = os.getenv("STATS_COOKIE_PATH")
-stats: Stats2 = Stats2(cookie=cookie_path)
+stats: Stats2 = Stats2(cookie=cookie_path, dev=False)
 
 # Logger
 logger = logging.getLogger()
