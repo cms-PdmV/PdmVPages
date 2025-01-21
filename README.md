@@ -17,10 +17,6 @@ Project consists of two tables:
 - User table - simplified version that shows only one dataset for each campaign, intended to be used by the majority of regular users
 - Full table - table aimed at experts that shows all existing workflows and datasets for each RAW dataset
 
-#### Staging workflows ([transferor_stuckor](transferor_stuckor))
-
-It is a monitoring tool designed to track status of staging input datasets needed for submitted workflows.
-
 ## Searching, sorting and sharing
 
 Unless specified otherwise, projects mentioned above use the same searching, sorting and URL sharing approach.
